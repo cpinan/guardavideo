@@ -31,6 +31,9 @@ class Job(BaseModel):
     duration_seconds: float | None = None  # duración del video (ffprobe)
     url_hash: str | None = None  # sha256(url canónica + calidad): detecta "ya lo descargué"
     content_hash: str | None = None  # sha256 del archivo: detecta contenido idéntico
+    starred: bool = False  # favorito
+    view_count: int = 0  # veces que se reprodujo
+    last_viewed_at: datetime | None = None
     retries: int = 0  # reintentos de red en curso (la UI muestra "Reconectando…")
     file_path: Path | None = None  # interno: nunca se expone al cliente
     thumbnail_path: Path | None = None  # interno

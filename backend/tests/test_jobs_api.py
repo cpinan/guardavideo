@@ -27,6 +27,9 @@ def test_create_job_returns_201_with_location(make_client: ClientFactory) -> Non
         "retries",
         "thumbnail_version",
         "duration_seconds",
+        "starred",
+        "view_count",
+        "last_viewed_at",
         "created_at",
         "size_bytes",
     }  # no filtra file_path

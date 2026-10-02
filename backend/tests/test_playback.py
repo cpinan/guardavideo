@@ -106,7 +106,7 @@ def test_migrates_v2_database_to_v3(tmp_path: Path) -> None:
     repo.update("v2", duration_seconds=61.5)
     assert repo.get("v2").duration_seconds == 61.5
     repo.close()
-    assert sqlite3.connect(db).execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 3
+    assert sqlite3.connect(db).execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION == 4
 
 
 @needs_ffmpeg

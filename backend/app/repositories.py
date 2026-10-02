@@ -84,8 +84,14 @@ _COLUMNS: list[tuple[str, str]] = [
 _COLUMNS_V2: list[tuple[str, str]] = [("url_hash", "TEXT"), ("content_hash", "TEXT")]
 # v3: duración del video
 _COLUMNS_V3: list[tuple[str, str]] = [("duration_seconds", "REAL")]
-_NAMES = [name for name, _ in [*_COLUMNS, *_COLUMNS_V2, *_COLUMNS_V3]]
-SCHEMA_VERSION = 3
+# v4: favoritos y vistas
+_COLUMNS_V4: list[tuple[str, str]] = [
+    ("starred", "INTEGER NOT NULL DEFAULT 0"),
+    ("view_count", "INTEGER NOT NULL DEFAULT 0"),
+    ("last_viewed_at", "TEXT"),
+]
+_NAMES = [name for name, _ in [*_COLUMNS, *_COLUMNS_V2, *_COLUMNS_V3, *_COLUMNS_V4]]
+SCHEMA_VERSION = 4
 
 
 def _to_row(job: Job) -> tuple[Any, ...]:
@@ -106,6 +112,9 @@ def _to_row(job: Job) -> tuple[Any, ...]:
         job.url_hash,
         job.content_hash,
         job.duration_seconds,
+        int(job.starred),
+        job.view_count,
+        job.last_viewed_at.isoformat() if job.last_viewed_at else None,
     )
 
 
@@ -127,6 +136,11 @@ def _from_row(row: sqlite3.Row) -> Job:
         url_hash=row["url_hash"],
         content_hash=row["content_hash"],
         duration_seconds=row["duration_seconds"],
+        starred=bool(row["starred"]),
+        view_count=row["view_count"],
+        last_viewed_at=datetime.fromisoformat(row["last_viewed_at"])
+        if row["last_viewed_at"]
+        else None,
     )
 
 
@@ -169,6 +183,10 @@ class SqliteJobRepository:
             self._conn.execute("PRAGMA user_version=2")
         if version < 3:  # noqa: PLR2004
             for name, sql_type in _COLUMNS_V3:
+                self._conn.execute(f"ALTER TABLE jobs ADD COLUMN {name} {sql_type}")  # noqa: S608
+            self._conn.execute("PRAGMA user_version=3")
+        if version < 4:  # noqa: PLR2004
+            for name, sql_type in _COLUMNS_V4:
                 self._conn.execute(f"ALTER TABLE jobs ADD COLUMN {name} {sql_type}")  # noqa: S608
             self._conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
 

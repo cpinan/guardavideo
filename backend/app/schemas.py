@@ -14,6 +14,10 @@ class JobCreate(BaseModel):
     force: bool = False  # descargar de nuevo aunque ya exista
 
 
+class JobUpdate(BaseModel):
+    starred: bool
+
+
 class Stats(BaseModel):
     videos: int  # archivos distintos en disco
     bytes: int
@@ -33,4 +37,7 @@ class JobRead(BaseModel):
     created_at: datetime
     size_bytes: int | None
     duration_seconds: float | None
+    starred: bool
+    view_count: int
+    last_viewed_at: datetime | None
     thumbnail_version: int

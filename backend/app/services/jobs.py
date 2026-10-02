@@ -7,6 +7,7 @@ import threading
 import uuid
 from collections.abc import AsyncIterator, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from pathlib import Path
 
 from app.config import Settings
@@ -115,6 +116,22 @@ class JobService:
         if job.thumbnail_path is None or not job.thumbnail_path.exists():
             raise JobNotFoundError(f"{job_id}: sin miniatura")
         return job.thumbnail_path
+
+    def set_starred(self, job_id: str, starred: bool) -> Job:
+        job = self._repo.get(job_id)
+        if job.status != Status.done:
+            raise InvalidJobStateError("Solo los videos terminados se pueden marcar como favoritos")
+        return self._repo.update(job_id, starred=starred)
+
+    def record_view(self, job_id: str) -> Job:
+        """Suma una reproducción (la UI la manda una vez por sesión de reproductor)."""
+        with self._lock:  # lectura + escritura atómica: dos pestañas no pisan el contador
+            job = self._repo.get(job_id)
+            if job.status != Status.done:
+                raise InvalidJobStateError("El video aún no está listo")
+            return self._repo.update(
+                job_id, view_count=job.view_count + 1, last_viewed_at=datetime.now(UTC)
+            )
 
     def stats(self) -> dict[str, int]:
         """Resumen de la biblioteca. Un archivo compartido por varios jobs se cuenta una vez."""

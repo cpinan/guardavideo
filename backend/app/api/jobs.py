@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 
 from app.domain import Job
-from app.schemas import JobCreate, JobRead, Stats
+from app.schemas import JobCreate, JobRead, JobUpdate, Stats
 from app.services.jobs import JobService
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
@@ -45,6 +45,16 @@ def library_stats(service: Service) -> dict[str, int]:
 @router.get("/{job_id}", response_model=JobRead)
 def get_job(job_id: str, service: Service) -> Job:
     return service.get(job_id)
+
+
+@router.patch("/{job_id}", response_model=JobRead)
+def update_job(job_id: str, body: JobUpdate, service: Service) -> Job:
+    return service.set_starred(job_id, body.starred)
+
+
+@router.post("/{job_id}/view", response_model=JobRead)
+def record_view(job_id: str, service: Service) -> Job:
+    return service.record_view(job_id)
 
 
 @router.delete("/{job_id}", response_model=JobRead, status_code=202)
