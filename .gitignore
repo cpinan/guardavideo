@@ -1,0 +1,28 @@
+# secrets / local config
+.env
+.env.*
+!.env.example
+
+# downloads
+downloads/
+backend/downloads/
+
+# python
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# node
+node_modules/
+frontend/dist/
+
+# os / tools
+.DS_Store
+graphify-out/
+
+*.db
+*.db-shm
+*.db-wal
