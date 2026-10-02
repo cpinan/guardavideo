@@ -1,5 +1,6 @@
 """Capa HTTP delgada: valida, delega en el servicio y da formato a la respuesta."""
 
+import mimetypes
 import re
 from collections.abc import AsyncIterator
 from typing import Annotated
@@ -84,6 +85,16 @@ def get_thumbnail(job_id: str, service: Service) -> FileResponse:
         media_type="image/jpeg",
         headers={"Cache-Control": "no-cache"},
     )
+
+
+@router.get("/{job_id}/stream")
+def stream_file(job_id: str, service: Service) -> FileResponse:
+    """El mismo archivo, pero en línea y con soporte de Range: lo que necesita <video> para
+    reproducir y saltar a un minuto sin bajar todo el archivo."""
+    job = service.file_for(job_id)
+    assert job.file_path is not None
+    media_type = mimetypes.guess_type(job.file_path.name)[0] or "application/octet-stream"
+    return FileResponse(job.file_path, media_type=media_type, content_disposition_type="inline")
 
 
 @router.get("/{job_id}/file")

@@ -26,4 +26,5 @@ class JobRead(BaseModel):
     retries: int
     created_at: datetime
     size_bytes: int | None
+    duration_seconds: float | None
     thumbnail_version: int

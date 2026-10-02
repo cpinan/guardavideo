@@ -82,8 +82,10 @@ _COLUMNS: list[tuple[str, str]] = [
 ]
 # v2: hashes para evitar descargas repetidas (columnas añadidas con ALTER TABLE)
 _COLUMNS_V2: list[tuple[str, str]] = [("url_hash", "TEXT"), ("content_hash", "TEXT")]
-_NAMES = [name for name, _ in [*_COLUMNS, *_COLUMNS_V2]]
-SCHEMA_VERSION = 2
+# v3: duración del video
+_COLUMNS_V3: list[tuple[str, str]] = [("duration_seconds", "REAL")]
+_NAMES = [name for name, _ in [*_COLUMNS, *_COLUMNS_V2, *_COLUMNS_V3]]
+SCHEMA_VERSION = 3
 
 
 def _to_row(job: Job) -> tuple[Any, ...]:
@@ -103,6 +105,7 @@ def _to_row(job: Job) -> tuple[Any, ...]:
         job.created_at.isoformat(),
         job.url_hash,
         job.content_hash,
+        job.duration_seconds,
     )
 
 
@@ -123,6 +126,7 @@ def _from_row(row: sqlite3.Row) -> Job:
         created_at=datetime.fromisoformat(row["created_at"]),
         url_hash=row["url_hash"],
         content_hash=row["content_hash"],
+        duration_seconds=row["duration_seconds"],
     )
 
 
@@ -162,6 +166,10 @@ class SqliteJobRepository:
             for name, sql_type in _COLUMNS_V2:
                 self._conn.execute(f"ALTER TABLE jobs ADD COLUMN {name} {sql_type}")  # noqa: S608
             self._conn.execute("CREATE INDEX IF NOT EXISTS jobs_url_hash ON jobs(url_hash)")
+            self._conn.execute("PRAGMA user_version=2")
+        if version < 3:  # noqa: PLR2004
+            for name, sql_type in _COLUMNS_V3:
+                self._conn.execute(f"ALTER TABLE jobs ADD COLUMN {name} {sql_type}")  # noqa: S608
             self._conn.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
 
     def add(self, job: Job) -> None:

@@ -8,6 +8,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from app.downloaders.base import DownloadContext, DownloadResult
+from app.media import make_test_video
 from app.thumbnails import make_test_card, thumb_path
 
 DEBUG_HOST = "debug.test"
@@ -84,5 +85,6 @@ class DebugDownloader:
 
         self._preview(ctx, dest_dir, job_id, 1)  # versión definitiva
         path = dest_dir / f"{job_id}.mp4"
-        path.write_bytes(b"debug-video")
+        if not make_test_video(path):  # sin ffmpeg: bytes de relleno (no reproducibles)
+            path.write_bytes(b"debug-video")
         return DownloadResult(path, f"Debug · {scenario}")

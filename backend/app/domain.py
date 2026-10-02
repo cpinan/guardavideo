@@ -28,6 +28,7 @@ class Job(BaseModel):
     error: str | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     size_bytes: int | None = None  # tamaño del archivo final
+    duration_seconds: float | None = None  # duración del video (ffprobe)
     url_hash: str | None = None  # sha256(url canónica + calidad): detecta "ya lo descargué"
     content_hash: str | None = None  # sha256 del archivo: detecta contenido idéntico
     retries: int = 0  # reintentos de red en curso (la UI muestra "Reconectando…")

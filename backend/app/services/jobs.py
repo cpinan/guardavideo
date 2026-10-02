@@ -15,6 +15,7 @@ from app.downloaders.debug import is_debug_url
 from app.downloaders.registry import select_downloader
 from app.exceptions import DownloadCancelledError, InvalidJobStateError, JobNotFoundError
 from app.hashing import file_sha256, url_key
+from app.media import probe_duration
 from app.repositories import JobRepository
 from app.security import assert_public_url
 
@@ -203,6 +204,7 @@ class JobService:
                 percent=100,
                 retries=0,
                 size_bytes=path.stat().st_size,
+                duration_seconds=probe_duration(path),
                 title=result.path.stem if result.title is None else result.title,
                 file_path=path,
                 content_hash=digest,
