@@ -150,3 +150,25 @@ describe("preferencias del reproductor", () => {
     expect(loadPrefs()).toMatchObject({ volume: 0.8, rate: 2 });
   });
 });
+
+describe("conteo de vistas", () => {
+  it("avisa una sola vez por sesión del reproductor, en la primera reproducción", () => {
+    const onPlayStart = vi.fn();
+    const { container } = render(<JobPlayer job={done} name="x" onPlayStart={onPlayStart} />);
+    const v = video(container);
+    expect(onPlayStart).not.toHaveBeenCalled(); // cargar no es ver
+    fireEvent.play(v);
+    fireEvent.pause(v);
+    fireEvent.play(v);
+    expect(onPlayStart).toHaveBeenCalledTimes(1);
+  });
+
+  it("cambiar de modo no cuenta otra vista (misma sesión)", () => {
+    const onPlayStart = vi.fn();
+    const { container, rerender } = render(<JobPlayer job={done} name="x" mode="inline" onPlayStart={onPlayStart} />);
+    fireEvent.play(video(container));
+    rerender(<JobPlayer job={done} name="x" mode="lightbox" onPlayStart={onPlayStart} />);
+    fireEvent.play(video(container));
+    expect(onPlayStart).toHaveBeenCalledTimes(1);
+  });
+});

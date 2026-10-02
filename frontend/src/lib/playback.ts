@@ -52,6 +52,13 @@ if (typeof window !== "undefined") {
   document.addEventListener("visibilitychange", () => document.hidden && flushPlayback());
 }
 
+export const getAllPlayback = (): Readonly<Record<string, Playback>> => state;
+
+/** Todas las posiciones guardadas (para "Seguir viendo"). Cambia de referencia al guardar. */
+export function useAllPlayback(): Readonly<Record<string, Playback>> {
+  return useSyncExternalStore(subscribe, () => state, () => ({}));
+}
+
 export const getPlayback = (id: string): Playback | undefined => state[id];
 
 export function savePlayback(id: string, patch: Partial<Omit<Playback, "at">>) {

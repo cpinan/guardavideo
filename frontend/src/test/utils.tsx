@@ -23,6 +23,9 @@ export const job = (overrides: Partial<Job> = {}): Job => ({
   created_at: null,
   size_bytes: null,
   duration_seconds: null,
+  starred: false,
+  view_count: 0,
+  last_viewed_at: null,
   ...overrides,
 });
 

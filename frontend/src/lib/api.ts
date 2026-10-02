@@ -80,6 +80,12 @@ export const deleteJob = async (id: string): Promise<void> => {
 
 export const cancelJob = (id: string) => request(api(`/jobs/${id}`), JobSchema, json("DELETE"));
 
+export const setStarred = (id: string, starred: boolean) =>
+  request(api(`/jobs/${id}`), JobSchema, json("PATCH", { starred }));
+
+/** Suma una reproducción (la manda el reproductor una vez por sesión). */
+export const recordView = (id: string) => request(api(`/jobs/${id}/view`), JobSchema, json("POST"));
+
 export const retryJob = (id: string) => request(api(`/jobs/${id}/retry`), JobSchema, json("POST"));
 
 export const getStats = () => request(api("/jobs/stats"), StatsSchema);

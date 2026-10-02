@@ -17,6 +17,8 @@ interface Props {
   onToggleLightbox?: () => void;
   onClose?: () => void;
   onPipChange?: (active: boolean) => void;
+  /** Se llama una sola vez por sesión de reproductor, al empezar a reproducir (cuenta una "vista"). */
+  onPlayStart?: () => void;
 }
 
 const pipSupported = () =>
@@ -27,11 +29,12 @@ const pipSupported = () =>
  * oculto en PiP): cambiar de modo solo cambia clases CSS, así que no se corta la reproducción
  * ni se pierde el segundo actual. Guarda segundo y duración, y reanuda donde lo dejaste.
  */
-export function JobPlayer({ job, name, mode = "inline", onToggleLightbox, onClose, onPipChange }: Props) {
+export function JobPlayer({ job, name, mode = "inline", onToggleLightbox, onClose, onPipChange, onPlayStart }: Props) {
   const ref = useRef<HTMLVideoElement>(null);
   const frame = useRef<HTMLDivElement>(null);
   const closeBtn = useRef<HTMLButtonElement>(null);
   const lastSave = useRef(0);
+  const counted = useRef(false);
   const [failed, setFailed] = useState(false);
   const [pip, setPip] = useState(false);
   const [resumedAt] = useState(() => {
@@ -174,6 +177,11 @@ export function JobPlayer({ job, name, mode = "inline", onToggleLightbox, onClos
           onVolumeChange={(e) => savePrefs({ volume: e.currentTarget.volume, muted: e.currentTarget.muted })}
           onRateChange={(e) => savePrefs({ rate: e.currentTarget.playbackRate })}
           onTimeUpdate={() => Date.now() - lastSave.current >= SAVE_EVERY_MS && save()}
+          onPlay={() => {
+            if (counted.current) return;
+            counted.current = true;
+            onPlayStart?.();
+          }}
           onPause={save}
           onSeeked={save}
           onEnded={() => savePlayback(job.id, { t: 0, watched: true })}

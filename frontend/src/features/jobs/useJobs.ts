@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { cancelJob, createJob, deleteJob, listJobs, retryJob } from "../../lib/api";
+import { cancelJob, createJob, deleteJob, listJobs, recordView, retryJob, setStarred } from "../../lib/api";
 import { JOBS_KEY } from "../../lib/keys";
 import { loadCachedJobs } from "../../lib/persist";
 import { clearPlayback } from "../../lib/playback";
@@ -64,6 +64,32 @@ export function useDeleteMany() {
       deleted.forEach(clearPlayback);
       qc.setQueryData<Job[]>(JOBS_KEY, (old = []) => old.filter((j) => !deleted.includes(j.id)));
     },
+  });
+}
+
+/** Favorito con actualización optimista: la estrella cambia al instante y vuelve atrás si falla. */
+export function useToggleStar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, starred }: { id: string; starred: boolean }) => setStarred(id, starred),
+    onMutate: async ({ id, starred }) => {
+      await qc.cancelQueries({ queryKey: JOBS_KEY });
+      const previous = qc.getQueryData<Job[]>(JOBS_KEY);
+      qc.setQueryData<Job[]>(JOBS_KEY, (old = []) => old.map((j) => (j.id === id ? { ...j, starred } : j)));
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => ctx?.previous && qc.setQueryData(JOBS_KEY, ctx.previous),
+    onSuccess: (job) => replaceJob(qc, job),
+  });
+}
+
+/** Cuenta una reproducción. Es un extra: si falla, no molesta al usuario. */
+export function useRecordView() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: recordView,
+    onSuccess: (job) => replaceJob(qc, job),
+    throwOnError: false,
   });
 }
 

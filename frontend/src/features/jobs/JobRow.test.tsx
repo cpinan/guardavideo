@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getPlayback, resetPlayback, savePlayback } from "../../lib/playback";
@@ -266,5 +266,23 @@ describe("JobRow", () => {
       await user.click(screen.getByRole("button", { name: "Sí, eliminar" }));
       expect(onDelete).toHaveBeenCalledWith("abc");
     });
+  });
+
+  it("reproducir cuenta una vista en el servidor (POST /view) una sola vez", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn(
+      (url: string, init?: RequestInit) =>
+        Promise.resolve(new Response(JSON.stringify(job({ status: "done", view_count: init ? 1 : 0, url })), { status: 200 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { container } = renderWithClient(<JobRow job={job({ status: "done", percent: 100 })} onCancel={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: "Reproducir" }));
+    const video = container.querySelector("video")!;
+    act(() => void video.dispatchEvent(new Event("play")));
+    act(() => void video.dispatchEvent(new Event("play")));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/v1/jobs/abc/view", expect.objectContaining({ method: "POST" })));
+    expect(fetchMock.mock.calls.filter(([url]) => url.endsWith("/view"))).toHaveLength(1);
   });
 });

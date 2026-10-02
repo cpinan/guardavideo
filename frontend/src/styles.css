@@ -76,6 +76,8 @@ main {
 @media (min-width: 1024px) {
   main.layout { max-width: 1180px; display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 32px; align-items: start; }
   .side { position: sticky; top: 24px; }
+  .actions { flex-direction: column; }
+  .actions button { flex: 0 0 auto; width: 100%; }
 }
 h1, h2, h3, p { margin: 0; }
 .muted { color: var(--muted); }
@@ -330,6 +332,45 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .player[hidden] { display: none; }
 body:has(.player.lightbox) { overflow: hidden; }
 
+
+/* ---------- favoritos y estantes de la biblioteca ---------- */
+.star {
+  flex: none; display: grid; place-items: center; width: 32px; min-height: 32px; height: 32px; padding: 0;
+  color: var(--muted); background: transparent; border: 0; border-radius: 50%;
+  transition: color .2s, transform .25s var(--ease), background .2s;
+}
+.star svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
+.star.on { color: #f5b301; }
+.star.on svg { fill: currentColor; animation: pop .35s var(--ease) both; }
+@media (hover: hover) { .star:hover { background: var(--card-2); transform: scale(1.1); } }
+.job-head .star { margin-left: auto; }
+.job-head .badge { margin-left: 0; }
+
+.shelves { display: grid; gap: 18px; margin-bottom: 20px; }
+.shelf-heading { margin: 0 4px 8px; font-size: 14px; letter-spacing: -.01em; }
+.shelf-row {
+  list-style: none; margin: 0; padding: 2px 2px 8px; display: flex; gap: 12px; overflow-x: auto;
+  scroll-snap-type: x proximity; scrollbar-width: thin;
+}
+.shelf-card { position: relative; flex: 0 0 158px; scroll-snap-align: start; animation: rise .4s var(--ease) both; }
+.shelf-open {
+  display: flex; flex-direction: column; align-items: stretch; gap: 2px; width: 100%; min-height: 0; padding: 0;
+  text-align: left; color: inherit; background: transparent; border: 0; border-radius: 12px;
+}
+.shelf-thumb {
+  position: relative; display: block; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden;
+  background: linear-gradient(135deg, var(--card-2), color-mix(in srgb, var(--accent) 14%, var(--card-2)));
+  transition: transform .25s var(--ease), box-shadow .25s;
+}
+.shelf-thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+@media (hover: hover) { .shelf-open:hover .shelf-thumb { transform: translateY(-2px); box-shadow: var(--shadow); } }
+.shelf-title { margin-top: 6px; font-size: 13px; font-weight: 650; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.shelf-sub { font-size: 12px; color: var(--muted); }
+.shelf-card .star { position: absolute; top: 4px; right: 4px; background: #0008; color: #fff; backdrop-filter: blur(4px); width: 28px; height: 28px; min-height: 28px; }
+.shelf-card .star.on { color: #f5b301; }
+.sort select { min-height: 38px; padding: 4px 12px; border-radius: 999px; font-size: 13px; }
+.jobs.flat { margin-top: 6px; }
+
 /* ---------- skeleton ---------- */
 .skeleton .thumb, .sk-line {
   background: linear-gradient(100deg, var(--card-2) 30%, color-mix(in srgb, var(--text) 8%, var(--card-2)) 50%, var(--card-2) 70%);
@@ -417,6 +458,8 @@ body:has(.player.lightbox) { overflow: hidden; }
   .search input { width: 100%; }
   .filters { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
   .filter { flex: none; }
+  .sort select { width: 100%; }
+  .shelf-card { flex-basis: 140px; }
   .job-meta .btn.icon-only { flex: 0 0 44px; }
   .player-bar .btn { flex: 1 1 auto; }
   .player.lightbox .player-frame { width: 100%; }

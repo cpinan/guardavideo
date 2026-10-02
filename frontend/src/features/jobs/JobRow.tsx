@@ -9,9 +9,11 @@ import { isActive, isRetryable, type Job, type Status } from "../../lib/schemas"
 import { displayTitle } from "../../lib/title";
 import { JobPlayer, type PlayerMode } from "./JobPlayer";
 import { JobThumb } from "./JobThumb";
+import { StarButton } from "./StarButton";
 import { hostOf } from "./url";
 import { useEta } from "./useEta";
 import { useJobEvents } from "./useJobEvents";
+import { useRecordView } from "./useJobs";
 
 const LABELS: Record<Status, string> = {
   queued: "En cola",
@@ -52,6 +54,7 @@ export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, h
   const willDownload = useWillAutoDownload(job.id);
   const playback = usePlayback(job.id);
   const eta = useEta(job);
+  const recordView = useRecordView();
   const [confirming, setConfirming] = useState(false);
   const [pipActive, setPipActive] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
@@ -90,6 +93,7 @@ export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, h
   const details = [
     hostOf(job.url),
     done && job.size_bytes !== null ? formatBytes(job.size_bytes) : null,
+    done && job.view_count > 0 ? `${job.view_count} ${job.view_count === 1 ? "vista" : "vistas"}` : null,
     job.created_at ? formatWhen(job.created_at) : null,
   ].filter(Boolean);
 
@@ -106,6 +110,7 @@ export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, h
           <h3 className="job-title" title={job.url}>
             {name}
           </h3>
+          {done && <StarButton job={job} />}
           <span className={`badge ${job.status}${retrying ? " retrying" : ""}`}>
             {retrying ? "Reintentando" : LABELS[job.status]}
           </span>
@@ -198,6 +203,7 @@ export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, h
           onToggleLightbox={toggleLightbox}
           onClose={closePlayer}
           onPipChange={setPipActive}
+          onPlayStart={() => recordView.mutate(job.id)}
         />
       )}
     </li>

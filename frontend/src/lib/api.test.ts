@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, cancelJob, createJob, deleteJob, eventsUrl, fileUrl, getHealth, listJobs, retryJob, thumbnailUrl } from "./api";
+import { ApiError, cancelJob, createJob, deleteJob, eventsUrl, fileUrl, getHealth, listJobs, recordView, retryJob, setStarred, thumbnailUrl } from "./api";
 import { JobSchema } from "./schemas";
 import { job } from "../test/utils";
 
@@ -75,6 +75,22 @@ describe("api", () => {
     reply(200, job({ status: "cancelled" }));
     await cancelJob("abc");
     expect(vi.mocked(fetch).mock.calls[0]?.[1]?.method).toBe("DELETE");
+  });
+
+  it("setStarred usa PATCH con el cuerpo { starred }", async () => {
+    reply(200, job({ starred: true }));
+    const updated = await setStarred("abc", true);
+    expect(updated.starred).toBe(true);
+    const [url, init] = vi.mocked(fetch).mock.calls[0] ?? [];
+    expect(url).toBe("/api/v1/jobs/abc");
+    expect(init?.method).toBe("PATCH");
+    expect(JSON.parse(init?.body as string)).toEqual({ starred: true });
+  });
+
+  it("recordView usa POST /view", async () => {
+    reply(200, job({ view_count: 3 }));
+    await expect(recordView("abc")).resolves.toMatchObject({ view_count: 3 });
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe("/api/v1/jobs/abc/view");
   });
 
   it("retryJob usa POST /retry", async () => {

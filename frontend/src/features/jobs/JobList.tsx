@@ -1,15 +1,18 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { groupByDay } from "../../lib/group";
+import { SORTS, type SortKey, sortJobs } from "../../lib/shelves";
 import { JOBS_KEY } from "../../lib/keys";
 import { isActive, type Job } from "../../lib/schemas";
 import { displayTitle } from "../../lib/title";
 import { JobRow } from "./JobRow";
+import { LibraryShelves } from "./LibraryShelves";
 import { useCancelJob, useDeleteJob, useDeleteMany, useJobsQuery, useRetryJob } from "./useJobs";
 
-type Filter = "all" | "active" | "done" | "failed";
+type Filter = "all" | "starred" | "active" | "done" | "failed";
 const FILTERS: { id: Filter; label: string; test: (j: Job) => boolean }[] = [
   { id: "all", label: "Todas", test: () => true },
+  { id: "starred", label: "★ Favoritos", test: (j) => j.starred },
   { id: "active", label: "En curso", test: isActive },
   { id: "done", label: "Listas", test: (j) => j.status === "done" },
   { id: "failed", label: "Con error", test: (j) => j.status === "error" || j.status === "cancelled" },
@@ -66,15 +69,17 @@ export function JobList({ highlightId, onExample }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
+  const [sort, setSort] = useState<SortKey>("recent");
 
   const jobs = useMemo(() => (data ?? []).slice().reverse(), [data]); // más nuevo primero
-  const failed = useMemo(() => jobs.filter(FILTERS[3]!.test), [jobs]);
+  const failed = useMemo(() => jobs.filter(FILTERS.find((f) => f.id === "failed")!.test), [jobs]);
   const visible = useMemo(() => {
     const test = FILTERS.find((f) => f.id === filter)!.test;
     const q = query.trim().toLowerCase();
-    return jobs.filter((j) => test(j) && (!q || `${displayTitle(j)} ${j.url}`.toLowerCase().includes(q)));
-  }, [jobs, filter, query]);
-  const groups = useMemo(() => groupByDay(visible), [visible]);
+    const matching = jobs.filter((j) => test(j) && (!q || `${displayTitle(j)} ${j.url}`.toLowerCase().includes(q)));
+    return sortJobs(matching, sort, displayTitle);
+  }, [jobs, filter, query, sort]);
+  const groups = useMemo(() => (sort === "recent" ? groupByDay(visible) : []), [visible, sort]);
 
   if (isLoading) {
     return (
@@ -131,6 +136,8 @@ export function JobList({ highlightId, onExample }: Props) {
         </div>
       )}
 
+      {filter === "all" && !query.trim() && <LibraryShelves jobs={jobs} />}
+
       <div className="toolbar">
         <div className="filters" role="group" aria-label="Filtrar descargas">
           {FILTERS.map((f) => {
@@ -149,6 +156,16 @@ export function JobList({ highlightId, onExample }: Props) {
             );
           })}
         </div>
+        <label className="sort">
+          <span className="sr-only">Ordenar por</span>
+          <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
+            {SORTS.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="search">
           <span className="sr-only">Buscar descargas</span>
           <input
@@ -189,6 +206,21 @@ export function JobList({ highlightId, onExample }: Props) {
       )}
 
       {visible.length === 0 && <p className="muted empty-filter">Nada coincide con el filtro o la búsqueda.</p>}
+
+      {sort !== "recent" && visible.length > 0 && (
+        <ul className="jobs flat" aria-label={`Descargas · ${SORTS.find((s) => s.id === sort)?.label}`}>
+          {visible.map((job) => (
+            <JobRow
+              key={job.id}
+              job={job}
+              onCancel={cancel.mutate}
+              onRetry={retry.mutate}
+              onDelete={remove.mutate}
+              highlight={job.id === highlightId}
+            />
+          ))}
+        </ul>
+      )}
 
       {groups.map((group) => (
         <div key={group.label} className="day">
