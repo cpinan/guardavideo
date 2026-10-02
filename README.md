@@ -14,8 +14,13 @@ Descarga videos desde el navegador con progreso en vivo. API FastAPI + frontend 
 - **Cualquier otro sitio** (YouTube, Vimeo, Dailymotion…) → yt-dlp.
 - **Dos botones**: **Procesar y descargar** (al terminar, el navegador baja el archivo solo, incluso si
   recargas la página mientras procesa) y **Solo procesar** (queda en la lista para verlo o bajarlo después).
-- **Reproductor en línea** (botón *Reproducir*): vista previa con Range (saltas a cualquier minuto sin bajar
-  todo). Guarda minuto y segundo; al recargar sigue donde lo dejaste y muestra *Visto 1:23 / 5:00*.
+- **Reproductor en línea** (botón *Reproducir* / *Continuar 1:23*): vista previa con Range (saltas a cualquier
+  minuto sin bajar todo). Guarda minuto, segundo, volumen y velocidad; al recargar sigue donde lo dejaste.
+  Se puede **ampliar a lightbox** (Esc / clic fuera para cerrar) y sacar a **Picture-in-Picture**; cambiar de
+  modo no corta la reproducción.
+- **Biblioteca**: filtros (todas / en curso / listas / con error), búsqueda, grupos por día, resumen de espacio,
+  "Limpiar con error", errores traducidos a lenguaje claro y avisos (toasts) al iniciar descargas.
+- **Interfaz**: tema claro/oscuro/sistema, diseño de dos columnas en pantallas anchas, instalable como app (PWA).
 - **Progreso en vivo** (SSE) con anillo/barra animada, tiempo restante, miniatura y duración del video.
 - **Historial local en SQLite**: las descargas sobreviven a reinicios; se pueden reintentar o eliminar.
 - **Sin descargas repetidas**: huella SHA-256 por URL+calidad y por contenido del archivo.
@@ -68,7 +73,7 @@ Todo se ejecuta desde la raíz con `make`:
 | `make lint` · `make typecheck` | ruff + eslint · mypy + tsc |
 | **`make check`** | **Todo lo anterior + build.** Es lo que corre el CI |
 
-Estado actual: **120 pruebas de backend** (pytest) y **179 de frontend** (Vitest + Testing Library).
+Estado actual: **123 pruebas de backend** (pytest) y **248 de frontend** (Vitest + Testing Library).
 
 **Backend** (`backend/tests/`)
 - Unitarias: repositorios (memoria y SQLite con el mismo contrato), config, hashing, seguridad SSRF, registro de descargadores.

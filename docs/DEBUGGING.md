@@ -56,6 +56,14 @@ puede forzar con `http://localhost:5173/?debug`.
 - Los escenarios `debug.test/*` generan un MP4 real de 12 s: sirven para probar el reproductor sin red.
 - Probar: escenario `ok` → **Reproducir** → avanza a ~0:05 → recarga la página: continúa en 0:05 con el reproductor abierto.
 
+## Lightbox, PiP y biblioteca
+- Reproductor: **Ampliar** abre el lightbox (diálogo modal: Esc o clic fuera cierran, el foco queda dentro). Es el
+  mismo `<video>` que el de la tarjeta, así que no se corta al ampliar/reducir. **Picture-in-Picture** solo aparece
+  si el navegador lo soporta; si cierras el reproductor con el video en PiP, sigue sonando en su ventana.
+- `GET /api/v1/jobs/stats` → `{videos, bytes, disk_free_bytes}` (un archivo compartido se cuenta una vez).
+- Preferencias: `hlsweb:player-prefs:v1` (volumen/velocidad), `hlsweb:theme:v1` (tema).
+- PWA: `frontend/public/manifest.webmanifest` + iconos; instalable desde "Añadir a pantalla de inicio".
+
 ## Base de datos local (SQLite)
 - Archivo: `<HLSWEB_DOWNLOAD_DIR>/hlsweb.db` (o `HLSWEB_DB_PATH`). Inspección: `sqlite3 backend/downloads/hlsweb.db 'select id,status,size_bytes,file_path from jobs'`.
 - Guarda cada descarga (estado, título, tamaño, fecha, rutas, hashes). Sobrevive a reinicios del servidor.
