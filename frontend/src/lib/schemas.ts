@@ -16,6 +16,7 @@ export const JobSchema = z.object({
   thumbnail_version: z.number().default(0),
   created_at: z.string().nullable().default(null),
   size_bytes: z.number().nullable().default(null),
+  duration_seconds: z.number().nullable().default(null),
 });
 export type Job = z.infer<typeof JobSchema>;
 

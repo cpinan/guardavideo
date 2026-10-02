@@ -1,8 +1,11 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { fileUrl } from "../../lib/api";
 import { formatEta } from "../../lib/eta";
-import { formatBytes, formatWhen } from "../../lib/format";
+import { useWillAutoDownload } from "../../lib/autodownload";
+import { formatBytes, formatClock, formatWhen } from "../../lib/format";
+import { savePlayback, usePlayback } from "../../lib/playback";
 import { isActive, isRetryable, type Job, type Status } from "../../lib/schemas";
+import { JobPlayer } from "./JobPlayer";
 import { JobThumb } from "./JobThumb";
 import { hostOf } from "./url";
 import { useEta } from "./useEta";
@@ -28,6 +31,10 @@ interface Props {
 /** memo: como solo cambia la referencia del job que recibió datos, el resto no se re-renderiza. */
 export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, highlight }: Props) {
   const connection = useJobEvents(job);
+  const willDownload = useWillAutoDownload(job.id);
+  const playback = usePlayback(job.id);
+  const playerOpen = job.status === "done" && (playback?.open ?? false);
+  const togglePlayer = () => savePlayback(job.id, { open: !playerOpen });
   const eta = useEta(job);
   const pct = Math.round(job.percent);
   const name = job.title ?? job.url;
@@ -39,6 +46,12 @@ export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, h
   else if (lostLink) note = "Reconectando para ver el progreso…";
   else if (job.status === "queued") note = "Esperando turno";
   else if (job.status === "running" && eta !== null) note = `${formatEta(eta)} restantes`;
+  if (isActive(job) && willDownload) note = `${note ? `${note} · ` : ""}Se descargará al terminar`;
+  const total = job.duration_seconds ?? playback?.d ?? 0;
+  if (job.status === "done" && playback) {
+    if (playback.watched) note = "Visto";
+    else if (playback.t >= 1) note = `Visto ${formatClock(playback.t)}${total ? ` / ${formatClock(total)}` : ""}`;
+  }
 
   const [confirming, setConfirming] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
@@ -56,7 +69,7 @@ export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, h
 
   return (
     <li ref={ref} className={`job ${job.status}${highlight ? " flash" : ""}`}>
-      <JobThumb job={job} name={name} />
+      <JobThumb job={job} name={name} playback={playback} onPlay={togglePlayer} />
 
       <div className="job-body">
         <div className="job-head">
@@ -89,6 +102,11 @@ export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, h
             </span>
           )}
           <span className="spacer" />
+          {job.status === "done" && (
+            <button type="button" className="btn ghost" aria-expanded={playerOpen} onClick={togglePlayer}>
+              {playerOpen ? "Cerrar vista previa" : "Reproducir"}
+            </button>
+          )}
           {job.status === "done" && (
             <a className="btn primary" href={fileUrl(job)}>
               Descargar
@@ -127,6 +145,8 @@ export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, h
           </p>
         )}
       </div>
+
+      {playerOpen && <JobPlayer job={job} name={name} />}
     </li>
   );
 });

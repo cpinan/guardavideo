@@ -85,6 +85,8 @@ export const retryJob = (id: string) => request(api(`/jobs/${id}/retry`), JobSch
 export const getHealth = () => request(`${ROOT}/health`, HealthSchema);
 
 export const fileUrl = (job: Job) => api(`/jobs/${job.id}/file`);
+/** Mismo archivo en línea y con Range: para <video>. `fileUrl` fuerza la descarga. */
+export const streamUrl = (job: Job) => api(`/jobs/${job.id}/stream`);
 export const eventsUrl = (id: string) => api(`/jobs/${id}/events`);
 /** `?v=` cambia cada vez que la miniatura se reemplaza: así el navegador no muestra la vieja. */
 export const thumbnailUrl = (job: Job) =>

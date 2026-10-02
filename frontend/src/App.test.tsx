@@ -3,14 +3,25 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { resetDebugState, setSimulatedOffline } from "./lib/debug";
+import { autoDownload } from "./lib/autodownload";
 import { JOBS_CACHE_KEY } from "./lib/persist";
 import { FakeEventSource, job, renderWithClient } from "./test/utils";
 
 const json = (body: unknown, status = 200) =>
   Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }));
 
-beforeEach(() => vi.stubGlobal("EventSource", FakeEventSource));
+let clicks: string[] = [];
+beforeEach(() => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  clicks = [];
+  FakeEventSource.instances = [];
+  // jsdom no descarga: registramos qué enlaces "descargó" la app
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+    clicks.push(this.getAttribute("href") ?? "");
+  });
+});
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   resetDebugState();
 });
@@ -32,7 +43,7 @@ describe("App (integración con fetch simulado)", () => {
 
     await screen.findByText("Aún no hay descargas.");
     await user.type(screen.getByLabelText("URL del video"), "https://example.com/v.mp4");
-    await user.click(screen.getByRole("button", { name: "Descargar" }));
+    await user.click(screen.getByRole("button", { name: "Procesar y descargar" }));
 
     expect(await screen.findByText("En cola")).toBeInTheDocument();
   });
@@ -48,7 +59,7 @@ describe("App (integración con fetch simulado)", () => {
     renderWithClient(<App />);
 
     await user.type(screen.getByLabelText("URL del video"), "http://127.0.0.1/x.m3u8");
-    await user.click(screen.getByRole("button", { name: "Descargar" }));
+    await user.click(screen.getByRole("button", { name: "Procesar y descargar" }));
 
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("red no permitida"));
   });
@@ -166,13 +177,13 @@ describe("App (integración con fetch simulado)", () => {
       await screen.findByText("Ya estaba");
 
       await user.type(screen.getByLabelText("URL del video"), "https://example.com/v.mp4");
-      await user.click(screen.getByRole("button", { name: "Descargar" }));
+      await user.click(screen.getByRole("button", { name: "Procesar y descargar" }));
 
       expect(await screen.findByText(/Ya tenías este video/)).toBeInTheDocument();
       expect(screen.getAllByText("Ya estaba")).toHaveLength(1);
     });
 
-    it("'Descargar de nuevo' reenvía la petición con force", async () => {
+    it("'Procesar de nuevo' reenvía la petición con force", async () => {
       const user = userEvent.setup();
       const existing = job({ id: "dup", status: "done", percent: 100 });
       const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
@@ -185,8 +196,8 @@ describe("App (integración con fetch simulado)", () => {
       await screen.findByText("Listo");
 
       await user.type(screen.getByLabelText("URL del video"), "https://example.com/v.mp4");
-      await user.click(screen.getByRole("button", { name: "Descargar" }));
-      await user.click(await screen.findByRole("button", { name: "Descargar de nuevo" }));
+      await user.click(screen.getByRole("button", { name: "Procesar y descargar" }));
+      await user.click(await screen.findByRole("button", { name: "Procesar de nuevo" }));
 
       expect(await screen.findByText("En cola")).toBeInTheDocument();
       expect(screen.getAllByRole("listitem")).toHaveLength(2);
@@ -207,5 +218,76 @@ describe("App (integración con fetch simulado)", () => {
 
     expect(await screen.findByText("Aún no hay descargas.")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/v1/jobs/abc/record", expect.objectContaining({ method: "DELETE" }));
+  });
+
+  describe("procesar y descargar", () => {
+    const post = (body: unknown, status = 201) => (_url: string, init?: RequestInit) =>
+      init?.method === "POST" ? json(body, status) : json([]);
+
+    it("al terminar el job baja el archivo una sola vez", async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal("fetch", vi.fn(post(job({ status: "queued", percent: 0 }))));
+      renderWithClient(<App />);
+      await screen.findByText("Aún no hay descargas.");
+
+      await user.type(screen.getByLabelText("URL del video"), "https://example.com/v.mp4");
+      await user.click(screen.getByRole("button", { name: "Procesar y descargar" }));
+      expect(await screen.findByText(/Se descargará al terminar/)).toBeInTheDocument();
+      expect(clicks).toEqual([]); // todavía procesando
+
+      act(() => FakeEventSource.instances[0]!.emit(job({ status: "done", percent: 100 })));
+
+      await waitFor(() => expect(clicks).toEqual(["/api/v1/jobs/abc/file"]));
+      expect(autoDownload.has("abc")).toBe(false);
+      act(() => FakeEventSource.instances[0]!.emit(job({ status: "done", percent: 100, title: "otra vez" })));
+      expect(clicks).toHaveLength(1); // no se repite
+    });
+
+    it("'Solo procesar' nunca descarga por su cuenta", async () => {
+      const user = userEvent.setup();
+      vi.stubGlobal("fetch", vi.fn(post(job({ status: "queued", percent: 0 }))));
+      renderWithClient(<App />);
+      await screen.findByText("Aún no hay descargas.");
+
+      await user.type(screen.getByLabelText("URL del video"), "https://example.com/v.mp4");
+      await user.click(screen.getByRole("button", { name: "Solo procesar" }));
+      await screen.findByText("En cola");
+      act(() => FakeEventSource.instances[0]!.emit(job({ status: "done", percent: 100 })));
+
+      expect(await screen.findByRole("link", { name: "Descargar" })).toBeInTheDocument();
+      expect(clicks).toEqual([]);
+      expect(screen.queryByText(/Se descargará al terminar/)).not.toBeInTheDocument();
+    });
+
+    it("si el video ya estaba listo lo baja de inmediato", async () => {
+      const user = userEvent.setup();
+      const ready = job({ id: "listo", status: "done", percent: 100 });
+      vi.stubGlobal("fetch", vi.fn((_u: string, init?: RequestInit) => (init?.method === "POST" ? json(ready, 200) : json([ready]))));
+      renderWithClient(<App />);
+      await screen.findByText("Listo");
+
+      await user.type(screen.getByLabelText("URL del video"), "https://example.com/v.mp4");
+      await user.click(screen.getByRole("button", { name: "Procesar y descargar" }));
+
+      await waitFor(() => expect(clicks).toEqual(["/api/v1/jobs/listo/file"]));
+      expect(await screen.findByText(/lo bajamos directo/)).toBeInTheDocument();
+    });
+
+    it("si el job falla se cancela la descarga automática pendiente", async () => {
+      autoDownload.add("abc");
+      vi.stubGlobal("fetch", vi.fn(() => json([job({ status: "error", error: "boom" })])));
+      renderWithClient(<App />);
+      await screen.findByText("boom");
+      expect(autoDownload.has("abc")).toBe(false);
+      expect(clicks).toEqual([]);
+    });
+
+    it("tras recargar la página mientras procesaba, igual baja al terminar", async () => {
+      localStorage.setItem("hlsweb:auto:v1", JSON.stringify(["abc"]));
+      autoDownload.reload(); // = arranque de la página
+      vi.stubGlobal("fetch", vi.fn(() => json([job({ status: "done", percent: 100 })])));
+      renderWithClient(<App />);
+      await waitFor(() => expect(clicks).toEqual(["/api/v1/jobs/abc/file"]));
+    });
   });
 });

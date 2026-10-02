@@ -97,7 +97,7 @@ input, select {
 input:focus-visible, select:focus-visible { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent); outline: none; border-color: var(--accent); }
 input[aria-invalid="true"] { border-color: var(--err); }
 .form > .field:not(.grow) { padding-top: 0; }
-.form button[type="submit"] { align-self: flex-end; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-self: flex-end; }
 
 button, .btn {
   touch-action: manipulation;
@@ -218,7 +218,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .ring-bg { stroke: #ffffff44; }
 .ring-fg { stroke: #fff; stroke-linecap: round; transition: stroke-dashoffset .6s var(--ease); }
 .ring span { position: relative; color: #fff; font-weight: 800; font-size: 14px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 4px #000a; }
-.mark { position: absolute; right: 8px; bottom: 8px; width: 28px; height: 28px; filter: drop-shadow(0 2px 6px #0007); }
+.mark { position: absolute; right: 8px; top: 8px; width: 28px; height: 28px; filter: drop-shadow(0 2px 6px #0007); }
 .mark circle { stroke: none; }
 .mark path { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .mark.ok circle { fill: var(--ok); }
@@ -226,6 +226,26 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .mark.ok { animation: pop .5s var(--ease) both; }
 .mark.ok path { stroke-dasharray: 20; stroke-dashoffset: 20; animation: draw .5s .25s ease-out forwards; }
 .mark.bad { animation: pop .4s var(--ease) both; }
+
+/* play, duración, "visto" y reproductor */
+.thumb-play {
+  position: absolute; inset: 0; width: 100%; min-height: 0; padding: 0; border: 0; border-radius: 0;
+  display: grid; place-items: center; background: linear-gradient(transparent 40%, #0007);
+  opacity: 0; transition: opacity .2s; cursor: pointer;
+}
+.thumb-play svg { width: 40px; height: 40px; fill: #fff; filter: drop-shadow(0 2px 8px #000a); transform: scale(.85); transition: transform .25s var(--ease); }
+@media (hover: hover) { .thumb:hover .thumb-play { opacity: 1; } .thumb:hover .thumb-play svg { transform: scale(1); } }
+@media (hover: none) { .thumb-play { opacity: .9; } .thumb-play svg { width: 30px; height: 30px; transform: none; } }
+.duration {
+  position: absolute; right: 6px; bottom: 8px; padding: 1px 6px; border-radius: 6px; font-size: 11px;
+  font-weight: 700; font-variant-numeric: tabular-nums; color: #fff; background: #000b; animation: fade .4s both;
+}
+.watch { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: #fff4; }
+.watch span { display: block; height: 100%; background: var(--accent-2); transition: width .4s var(--ease); }
+.player { grid-column: 1 / -1; margin-top: 4px; animation: pop .3s var(--ease) both; transform-origin: top center; }
+.player video { display: block; width: 100%; max-height: 70vh; border-radius: 12px; background: #000; }
+.player-note { margin-top: 6px; font-size: 13px; color: var(--muted); }
+.player-error { grid-column: 1 / -1; padding: 12px; border-radius: 12px; font-size: 14px; color: var(--err); background: color-mix(in srgb, var(--err) 10%, transparent); }
 
 /* ---------- skeleton ---------- */
 .skeleton .thumb, .sk-line {
@@ -279,8 +299,9 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   /* formulario: URL a todo el ancho; calidad y botón comparten la 2ª fila */
   .form { padding: 14px; gap: 12px; }
   .form .field.grow { flex: 1 1 100%; }
-  .form .field:not(.grow) { flex: 0 0 38%; }
-  .form button[type="submit"] { flex: 1 1 0; align-self: flex-end; min-height: 48px; }
+  .actions { flex: 1 1 100%; flex-direction: column; align-self: stretch; }
+  .actions button { width: 100%; min-height: 48px; }
+  .form .field:not(.grow) { flex: 1 1 100%; }
 
   .list-head { flex-wrap: wrap; row-gap: 4px; }
   .notice { align-items: stretch; flex-direction: column; }
@@ -300,7 +321,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   .job-meta .btn { flex: 1 1 0; }
   .ring svg { width: 44px; height: 44px; }
   .ring span { font-size: 12px; }
-  .mark { width: 22px; height: 22px; right: 5px; bottom: 5px; }
+  .mark { width: 22px; height: 22px; right: 5px; top: 5px; }
 
   /* panel de depuración como hoja inferior */
   .debug-panel { left: 8px; right: 8px; width: auto; max-height: 65dvh; }
@@ -308,7 +329,6 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 
 @media (max-width: 360px) {
   .job { grid-template-columns: 84px 1fr; }
-  .form .field:not(.grow) { flex-basis: 42%; }
 }
 
 /* ---------- animations ---------- */

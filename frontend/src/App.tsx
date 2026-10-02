@@ -2,13 +2,22 @@ import { useState } from "react";
 import { ConnectionBanner } from "./components/ConnectionBanner";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { DebugPanel } from "./features/debug/DebugPanel";
-import { JobForm } from "./features/jobs/JobForm";
+import { JobForm, type SubmitMode } from "./features/jobs/JobForm";
 import { JobList } from "./features/jobs/JobList";
+import { useAutoDownload } from "./features/jobs/useAutoDownload";
 import { useCreateJob, useJobsQuery } from "./features/jobs/useJobs";
+import { fileUrl } from "./lib/api";
+import { autoDownload, triggerDownload } from "./lib/autodownload";
 import { useDocumentTitle, useOnline, useRefetchOnReconnect } from "./lib/hooks";
 import { isActive } from "./lib/schemas";
 
 const APP_NAME = "HLS Web";
+
+/** Si el archivo ya existe lo baja ya; si no, lo marca para bajarlo cuando termine de procesarse. */
+function requestDownload(id: string, readyUrl: string | null) {
+  if (readyUrl) triggerDownload(readyUrl);
+  else autoDownload.add(id);
+}
 
 function useProgressTitle() {
   const { data } = useJobsQuery();
@@ -19,8 +28,14 @@ function useProgressTitle() {
 
 export default function App() {
   const create = useCreateJob();
-  const [reused, setReused] = useState<{ id: string; url: string; quality?: number } | null>(null);
+  const [reused, setReused] = useState<{
+    id: string;
+    url: string;
+    quality?: number;
+    mode: SubmitMode;
+  } | null>(null);
   useProgressTitle();
+  useAutoDownload();
   useRefetchOnReconnect(useOnline());
 
   return (
@@ -41,25 +56,32 @@ export default function App() {
         <JobForm
           pending={create.isPending}
           error={create.error?.message}
-          onSubmit={async (url, quality) => {
+          onSubmit={async (url, quality, mode) => {
             setReused(null);
             const { job, reused: wasReused } = await create.mutateAsync({ url, quality });
-            if (wasReused) setReused({ id: job.id, url, quality });
+            if (mode === "download") requestDownload(job.id, job.status === "done" ? fileUrl(job) : null);
+            if (wasReused) setReused({ id: job.id, url, quality, mode });
           }}
         />
         {reused && (
           <div role="status" className="notice info">
-            <span>Ya tenías este video: lo resaltamos abajo en vez de descargarlo otra vez.</span>
+            <span>
+              {reused.mode === "download"
+                ? "Ya tenías este video: lo bajamos directo, sin procesarlo otra vez."
+                : "Ya tenías este video: lo resaltamos abajo en vez de procesarlo otra vez."}
+            </span>
             <button
               type="button"
               className="btn ghost"
               onClick={() => {
-                const { url, quality } = reused;
+                const { url, quality, mode } = reused;
                 setReused(null);
-                create.mutate({ url, quality, force: true });
+                void create.mutateAsync({ url, quality, force: true }).then(({ job }) => {
+                  if (mode === "download") requestDownload(job.id, null);
+                });
               }}
             >
-              Descargar de nuevo
+              Procesar de nuevo
             </button>
           </div>
         )}

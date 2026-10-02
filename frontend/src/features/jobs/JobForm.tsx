@@ -4,9 +4,12 @@ import { detectSource, isValidUrl } from "./url";
 
 const DRAFT_KEY = "hlsweb:draft:v1";
 
+/** download = procesar y bajar el archivo al terminar; process = solo procesar (queda en la lista). */
+export type SubmitMode = "download" | "process";
+
 interface Props {
   /** Si devuelve una promesa, el formulario conserva lo escrito hasta que se resuelva. */
-  onSubmit: (url: string, quality?: number) => Promise<unknown> | void;
+  onSubmit: (url: string, quality: number | undefined, mode: SubmitMode) => Promise<unknown> | void;
   pending: boolean;
   error?: string;
 }
@@ -28,6 +31,7 @@ export function JobForm({ onSubmit, pending, error }: Props) {
   const [url, setUrl] = useState(draft.url);
   const [quality, setQuality] = useState(draft.quality);
   const [touched, setTouched] = useState(false);
+  const [sending, setSending] = useState<SubmitMode | null>(null);
 
   // Borrador: si se recarga la página (o falla el envío) no se pierde lo escrito.
   useEffect(() => {
@@ -39,19 +43,26 @@ export function JobForm({ onSubmit, pending, error }: Props) {
   const showInvalid = touched && url !== "" && !valid;
   const source = detectSource(url);
 
+  async function submit(mode: SubmitMode) {
+    if (!valid || pending) return;
+    setSending(mode);
+    try {
+      await onSubmit(url, quality ? Number(quality) : undefined, mode);
+    } catch {
+      return; // el error se muestra vía `error`; se conserva el borrador para reintentar
+    } finally {
+      setSending(null);
+    }
+    setUrl("");
+    setTouched(false);
+  }
+
   return (
     <form
       className="card form"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        if (!valid || pending) return;
-        try {
-          await onSubmit(url, quality ? Number(quality) : undefined);
-        } catch {
-          return; // el error se muestra vía `error`; se conserva el borrador para reintentar
-        }
-        setUrl("");
-        setTouched(false);
+      onSubmit={(e) => {
+        e.preventDefault(); // Enter = acción principal: procesar y descargar
+        void submit("download");
       }}
     >
       <div className="field grow">
@@ -94,10 +105,16 @@ export function JobForm({ onSubmit, pending, error }: Props) {
         </select>
       </div>
 
-      <button type="submit" className="primary" disabled={!valid || pending}>
-        {pending && <span className="spinner" aria-hidden="true" />}
-        {pending ? "Enviando…" : "Descargar"}
-      </button>
+      <div className="actions">
+        <button type="submit" className="primary" disabled={!valid || pending}>
+          {sending === "download" && <span className="spinner" aria-hidden="true" />}
+          {sending === "download" ? "Enviando…" : "Procesar y descargar"}
+        </button>
+        <button type="button" className="ghost" disabled={!valid || pending} onClick={() => void submit("process")}>
+          {sending === "process" && <span className="spinner" aria-hidden="true" />}
+          {sending === "process" ? "Enviando…" : "Solo procesar"}
+        </button>
+      </div>
       {error && (
         <p role="alert" className="err full">
           {error}

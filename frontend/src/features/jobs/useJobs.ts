@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelJob, createJob, deleteJob, listJobs, retryJob } from "../../lib/api";
 import { JOBS_KEY } from "../../lib/keys";
 import { loadCachedJobs } from "../../lib/persist";
+import { clearPlayback } from "../../lib/playback";
 import type { Job } from "../../lib/schemas";
 
 export { JOBS_KEY };
@@ -44,7 +45,10 @@ export function useDeleteJob() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: deleteJob,
-    onSuccess: (_, id) => qc.setQueryData<Job[]>(JOBS_KEY, (old = []) => old.filter((j) => j.id !== id)),
+    onSuccess: (_, id) => {
+      clearPlayback(id);
+      qc.setQueryData<Job[]>(JOBS_KEY, (old = []) => old.filter((j) => j.id !== id));
+    },
   });
 }
 

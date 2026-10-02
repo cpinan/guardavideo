@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatBytes, formatWhen } from "./format";
+import { formatBytes, formatClock, formatWhen } from "./format";
 
 describe("formatBytes", () => {
   it.each([
@@ -22,4 +22,15 @@ describe("formatWhen", () => {
   it("ayer", () => expect(formatWhen(ago(86_400_000), now)).toBe("ayer"));
   it("antiguo: fecha corta", () => expect(formatWhen(ago(30 * 86_400_000), now)).toMatch(/2026/));
   it("fecha inválida: vacío", () => expect(formatWhen("nope", now)).toBe(""));
+});
+
+describe("formatClock", () => {
+  it.each([
+    [0, "0:00"],
+    [5.9, "0:05"],
+    [75, "1:15"],
+    [600, "10:00"],
+    [3725, "1:02:05"],
+    [-3, "0:00"],
+  ])("%d -> %s", (s, text) => expect(formatClock(s)).toBe(text));
 });

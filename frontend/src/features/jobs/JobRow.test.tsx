@@ -2,10 +2,12 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { getPlayback, resetPlayback, savePlayback } from "../../lib/playback";
 import { FakeEventSource, job, renderWithClient } from "../../test/utils";
 import { JobRow } from "./JobRow";
 
 beforeEach(() => {
+  resetPlayback();
   FakeEventSource.instances = [];
   vi.stubGlobal("EventSource", FakeEventSource);
 });
@@ -128,5 +130,55 @@ describe("JobRow", () => {
     Element.prototype.scrollIntoView = scroll;
     renderWithClient(<JobRow job={job({ status: "done" })} onCancel={vi.fn()} highlight />);
     expect(scroll).toHaveBeenCalled();
+  });
+
+  describe("reproductor en línea", () => {
+    const done = (extra = {}) => job({ status: "done", percent: 100, title: "Mi video", ...extra });
+
+    it("Reproducir abre el reproductor y Cerrar vista previa lo oculta", async () => {
+      const user = userEvent.setup();
+      renderWithClient(<JobRow job={done()} onCancel={vi.fn()} />);
+      expect(screen.queryByLabelText(/Reproductor de/)).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Reproducir" }));
+      expect(screen.getByLabelText("Reproductor de Mi video")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Cerrar vista previa" })).toHaveAttribute("aria-expanded", "true");
+
+      await user.click(screen.getByRole("button", { name: "Cerrar vista previa" }));
+      expect(screen.queryByLabelText(/Reproductor de/)).not.toBeInTheDocument();
+    });
+
+    it("recuerda que estaba abierto: tras recargar sigue abierto", async () => {
+      const user = userEvent.setup();
+      const first = renderWithClient(<JobRow job={done()} onCancel={vi.fn()} />);
+      await user.click(screen.getByRole("button", { name: "Reproducir" }));
+      first.unmount();
+
+      renderWithClient(<JobRow job={done()} onCancel={vi.fn()} />);
+      expect(screen.getByLabelText("Reproductor de Mi video")).toBeInTheDocument();
+      expect(getPlayback("abc")?.open).toBe(true);
+    });
+
+    it("no ofrece reproducir un job que aún no terminó", () => {
+      renderWithClient(<JobRow job={job()} onCancel={vi.fn()} />);
+      expect(screen.queryByRole("button", { name: "Reproducir" })).not.toBeInTheDocument();
+    });
+
+    it("muestra la duración sobre la miniatura", () => {
+      renderWithClient(<JobRow job={done({ duration_seconds: 3725 })} onCancel={vi.fn()} />);
+      expect(screen.getByText("1:02:05")).toBeInTheDocument();
+    });
+
+    it("muestra por dónde vas: 'Visto 1:23 / 5:00'", () => {
+      savePlayback("abc", { t: 83, d: 300 });
+      renderWithClient(<JobRow job={done({ duration_seconds: 300 })} onCancel={vi.fn()} />);
+      expect(screen.getByText("Visto 1:23 / 5:00")).toBeInTheDocument();
+    });
+
+    it("muestra 'Visto' cuando llegaste al final", () => {
+      savePlayback("abc", { t: 0, d: 300, watched: true });
+      renderWithClient(<JobRow job={done()} onCancel={vi.fn()} />);
+      expect(screen.getByText("Visto")).toBeInTheDocument();
+    });
   });
 });

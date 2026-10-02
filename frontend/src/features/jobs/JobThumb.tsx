@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { thumbnailUrl } from "../../lib/api";
+import { formatClock } from "../../lib/format";
+import type { Playback } from "../../lib/playback";
 import { isActive, type Job } from "../../lib/schemas";
 
 const R = 18;
@@ -9,11 +11,21 @@ const CIRCUMFERENCE = 2 * Math.PI * R;
  * Miniatura del video. Mientras descarga se ve atenuada con un anillo de progreso encima;
  * al terminar recupera el color y aparece la marca de "listo".
  */
-export function JobThumb({ job, name }: { job: Job; name: string }) {
+interface Props {
+  job: Job;
+  name: string;
+  playback?: Playback;
+  /** Atajo con el mouse; el botón accesible "Reproducir" está en las acciones de la tarjeta. */
+  onPlay?: () => void;
+}
+
+export function JobThumb({ job, name, playback, onPlay }: Props) {
   const src = job.thumbnail_version > 0 ? thumbnailUrl(job) : null;
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const active = isActive(job);
   const pct = Math.round(job.percent);
+  const total = job.duration_seconds ?? playback?.d ?? 0;
+  const watchedPct = playback && !playback.watched && total > 0 ? Math.min(100, (playback.t / total) * 100) : 0;
 
   return (
     <div className={`thumb ${job.status}`}>
@@ -47,6 +59,21 @@ export function JobThumb({ job, name }: { job: Job; name: string }) {
             />
           </svg>
           <span>{pct}</span>
+        </div>
+      )}
+      {job.status === "done" && onPlay && (
+        <button type="button" className="thumb-play" onClick={onPlay} tabIndex={-1} aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        </button>
+      )}
+      {job.status === "done" && job.duration_seconds !== null && (
+        <span className="duration">{formatClock(job.duration_seconds)}</span>
+      )}
+      {job.status === "done" && watchedPct > 0 && (
+        <div className="watch" aria-hidden="true">
+          <span style={{ width: `${watchedPct}%` }} />
         </div>
       )}
       {job.status === "done" && (

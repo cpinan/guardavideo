@@ -11,7 +11,7 @@ describe("JobForm", () => {
     await user.type(screen.getByLabelText("URL del video"), "no-es-url");
     await user.tab(); // blur
 
-    expect(screen.getByRole("button", { name: "Descargar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Procesar y descargar" })).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent("URL http(s) válida");
     expect(screen.getByLabelText("URL del video")).toBeInvalid();
   });
@@ -23,9 +23,9 @@ describe("JobForm", () => {
 
     await user.type(screen.getByLabelText("URL del video"), "https://vimeo.com/1");
     await user.selectOptions(screen.getByLabelText("Calidad"), "720");
-    await user.click(screen.getByRole("button", { name: "Descargar" }));
+    await user.click(screen.getByRole("button", { name: "Procesar y descargar" }));
 
-    expect(onSubmit).toHaveBeenCalledWith("https://vimeo.com/1", 720);
+    expect(onSubmit).toHaveBeenCalledWith("https://vimeo.com/1", 720, "download");
     expect(screen.getByLabelText("URL del video")).toHaveValue("");
   });
 
@@ -52,7 +52,7 @@ describe("JobForm", () => {
     render(<JobForm onSubmit={onSubmit} pending={false} error="Sin conexión con el servidor" />);
 
     await user.type(screen.getByLabelText("URL del video"), "https://vimeo.com/1");
-    await user.click(screen.getByRole("button", { name: "Descargar" }));
+    await user.click(screen.getByRole("button", { name: "Procesar y descargar" }));
 
     expect(screen.getByLabelText("URL del video")).toHaveValue("https://vimeo.com/1");
     expect(screen.getByRole("alert")).toHaveTextContent("Sin conexión");
@@ -62,7 +62,7 @@ describe("JobForm", () => {
     const user = userEvent.setup();
     render(<JobForm onSubmit={vi.fn().mockResolvedValue(undefined)} pending={false} />);
     await user.type(screen.getByLabelText("URL del video"), "https://vimeo.com/1");
-    await user.click(screen.getByRole("button", { name: "Descargar" }));
+    await user.click(screen.getByRole("button", { name: "Procesar y descargar" }));
 
     await waitFor(() => expect(screen.getByLabelText("URL del video")).toHaveValue(""));
     expect(localStorage.getItem("hlsweb:draft:v1")).toBeNull();
@@ -81,5 +81,36 @@ describe("JobForm", () => {
     render(<JobForm onSubmit={onSubmit} pending />);
     await user.type(screen.getByLabelText("URL del video"), "https://vimeo.com/1{enter}");
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("'Solo procesar' envía el modo process y limpia el campo", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<JobForm onSubmit={onSubmit} pending={false} />);
+
+    await user.type(screen.getByLabelText("URL del video"), "https://vimeo.com/1");
+    await user.click(screen.getByRole("button", { name: "Solo procesar" }));
+
+    expect(onSubmit).toHaveBeenCalledWith("https://vimeo.com/1", undefined, "process");
+    await waitFor(() => expect(screen.getByLabelText("URL del video")).toHaveValue(""));
+  });
+
+  it("Enter en el campo ejecuta la acción principal (procesar y descargar)", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<JobForm onSubmit={onSubmit} pending={false} />);
+    await user.type(screen.getByLabelText("URL del video"), "https://vimeo.com/1{enter}");
+    expect(onSubmit).toHaveBeenCalledWith("https://vimeo.com/1", undefined, "download");
+  });
+
+  it("ambas acciones están deshabilitadas con una URL inválida o mientras envía", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<JobForm onSubmit={vi.fn()} pending={false} />);
+    expect(screen.getByRole("button", { name: "Solo procesar" })).toBeDisabled();
+    await user.type(screen.getByLabelText("URL del video"), "https://vimeo.com/1");
+    expect(screen.getByRole("button", { name: "Solo procesar" })).toBeEnabled();
+    rerender(<JobForm onSubmit={vi.fn()} pending />);
+    expect(screen.getByRole("button", { name: "Solo procesar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Procesar y descargar" })).toBeDisabled();
   });
 });
