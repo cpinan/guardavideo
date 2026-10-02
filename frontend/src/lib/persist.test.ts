@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { job, makeClient } from "../test/utils";
 import { JOBS_KEY } from "./keys";
+import { storage } from "./storage";
 import { clearCachedJobs, JOBS_CACHE_KEY, loadCachedJobs, persistJobs } from "./persist";
 
 beforeEach(() => vi.useFakeTimers());
@@ -34,18 +35,19 @@ describe("loadCachedJobs", () => {
   );
 
   it("no revienta si localStorage lanza", () => {
-    vi.spyOn(localStorage, "getItem").mockImplementation(() => {
+    const blocked = () => {
       throw new Error("blocked");
-    });
+    };
+    vi.stubGlobal("localStorage", { getItem: blocked, setItem: blocked, removeItem: blocked });
     expect(loadCachedJobs()).toBeUndefined();
-    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 });
 
 describe("persistJobs", () => {
   it("guarda con throttle: muchos cambios seguidos = una sola escritura", () => {
     const qc = makeClient();
-    const setItem = vi.spyOn(localStorage, "setItem");
+    const setItem = vi.spyOn(storage, "set"); // independiente de cómo implemente Storage cada entorno
     const stop = persistJobs(qc, 500);
 
     qc.setQueryData(JOBS_KEY, [job({ percent: 1 })]);
