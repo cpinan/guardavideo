@@ -181,4 +181,90 @@ describe("JobRow", () => {
       expect(screen.getByText("Visto")).toBeInTheDocument();
     });
   });
+
+  describe("tarjeta de video", () => {
+    const done = (extra = {}) => job({ status: "done", percent: 100, title: "Mi video", ...extra });
+
+    it("un video listo no muestra barra ni porcentaje (ya no aportan nada)", () => {
+      renderWithClient(<JobRow job={done()} onCancel={vi.fn()} />);
+      expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
+      expect(screen.queryByText("100%")).not.toBeInTheDocument();
+    });
+
+    it("sin título muestra el sitio y no la URL cruda", () => {
+      renderWithClient(<JobRow job={job({ title: null, url: "https://www.dailymotion.com/video/x8abc" })} onCancel={vi.fn()} />);
+      expect(screen.getByRole("heading", { name: "dailymotion.com · x8abc" })).toBeInTheDocument();
+    });
+
+    it("traduce el error técnico y deja el original en 'Ver detalles'", () => {
+      renderWithClient(
+        <JobRow job={job({ status: "error", error: "ERROR: Private video. Sign in if you've been granted access" })} onCancel={vi.fn()} />,
+      );
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveTextContent("Este video es privado.");
+      expect(screen.getByText("Ver detalles")).toBeInTheDocument();
+      expect(alert).toHaveTextContent("Sign in if you've been granted access");
+    });
+
+    it("Ampliar abre el lightbox y Reducir vuelve a la tarjeta, recordándolo", async () => {
+      const user = userEvent.setup();
+      renderWithClient(<JobRow job={done()} onCancel={vi.fn()} />);
+      await user.click(screen.getByRole("button", { name: "Reproducir" }));
+      await user.click(screen.getByRole("button", { name: "Ampliar" }));
+
+      expect(screen.getByRole("dialog", { name: "Reproductor de Mi video" })).toBeInTheDocument();
+      expect(getPlayback("abc")).toMatchObject({ open: true, lightbox: true });
+
+      await user.click(screen.getByRole("button", { name: "Reducir" }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Reproductor de Mi video")).toBeInTheDocument();
+      expect(getPlayback("abc")).toMatchObject({ open: true, lightbox: false });
+    });
+
+    it("tras recargar con el lightbox abierto, sigue abierto", () => {
+      savePlayback("abc", { open: true, lightbox: true });
+      renderWithClient(<JobRow job={done()} onCancel={vi.fn()} />);
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    it("Cerrar reproductor cierra todo", async () => {
+      const user = userEvent.setup();
+      savePlayback("abc", { open: true, lightbox: true });
+      renderWithClient(<JobRow job={done()} onCancel={vi.fn()} />);
+      await user.click(screen.getByRole("button", { name: "Cerrar reproductor" }));
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(getPlayback("abc")).toMatchObject({ open: false, lightbox: false });
+    });
+
+    it("si cierras el reproductor con el video en PiP, el <video> sigue montado y oculto", async () => {
+      const user = userEvent.setup();
+      const { container } = renderWithClient(<JobRow job={done()} onCancel={vi.fn()} />);
+      await user.click(screen.getByRole("button", { name: "Reproducir" }));
+      const video = container.querySelector("video")!;
+
+      act(() => void video.dispatchEvent(new Event("enterpictureinpicture")));
+      await user.click(screen.getByRole("button", { name: "Cerrar vista previa" }));
+
+      expect(container.querySelector("video")).toBe(video); // misma instancia: el PiP no se corta
+      expect(container.querySelector(".player")).toHaveAttribute("hidden");
+
+      act(() => void video.dispatchEvent(new Event("leavepictureinpicture"))); // cierras la ventana PiP
+      expect(container.querySelector("video")).toBeNull();
+    });
+
+    it("con progreso guardado el botón principal dice 'Continuar 1:23'", () => {
+      savePlayback("abc", { t: 83, d: 300 });
+      renderWithClient(<JobRow job={done()} onCancel={vi.fn()} />);
+      expect(screen.getByRole("button", { name: "Continuar 1:23" })).toBeInTheDocument();
+    });
+
+    it("eliminar es un botón de icono con nombre accesible", async () => {
+      const user = userEvent.setup();
+      const onDelete = vi.fn();
+      renderWithClient(<JobRow job={done()} onCancel={vi.fn()} onDelete={onDelete} />);
+      await user.click(screen.getByRole("button", { name: "Eliminar" }));
+      await user.click(screen.getByRole("button", { name: "Sí, eliminar" }));
+      expect(onDelete).toHaveBeenCalledWith("abc");
+    });
+  });
 });

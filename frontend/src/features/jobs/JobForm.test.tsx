@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { Toaster } from "../../components/Toaster";
 import { JobForm } from "./JobForm";
 
 describe("JobForm", () => {
@@ -112,5 +113,44 @@ describe("JobForm", () => {
     rerender(<JobForm onSubmit={vi.fn()} pending />);
     expect(screen.getByRole("button", { name: "Solo procesar" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Procesar y descargar" })).toBeDisabled();
+  });
+
+  describe("pegar y enlace de ejemplo", () => {
+    afterEach(() => vi.unstubAllGlobals());
+    const withClipboard = (text: string | Error) =>
+      vi.stubGlobal("navigator", {
+        ...navigator,
+        clipboard: { readText: () => (text instanceof Error ? Promise.reject(text) : Promise.resolve(text)) },
+      });
+
+    it("sin API de portapapeles no muestra el botón Pegar", () => {
+      vi.stubGlobal("navigator", { ...navigator, clipboard: undefined });
+      render(<JobForm onSubmit={vi.fn()} pending={false} />);
+      expect(screen.queryByRole("button", { name: "Pegar" })).not.toBeInTheDocument();
+    });
+
+    it("Pegar rellena el campo con un enlace válido", async () => {
+      const user = userEvent.setup();
+      withClipboard("  https://vimeo.com/123  ");
+      render(<JobForm onSubmit={vi.fn()} pending={false} />);
+      await user.click(screen.getByRole("button", { name: "Pegar" }));
+      expect(screen.getByLabelText("URL del video")).toHaveValue("https://vimeo.com/123");
+    });
+
+    it("Pegar ignora texto que no es un enlace (y avisa)", async () => {
+      const user = userEvent.setup();
+      withClipboard("hola mundo");
+      render(<><JobForm onSubmit={vi.fn()} pending={false} /><Toaster /></>);
+      await user.click(screen.getByRole("button", { name: "Pegar" }));
+      expect(screen.getByLabelText("URL del video")).toHaveValue("");
+      expect(await screen.findByText(/no tiene un enlace/)).toBeInTheDocument();
+    });
+
+    it("injectUrl rellena el campo, incluso repitiendo el mismo enlace", () => {
+      const { rerender } = render(<JobForm onSubmit={vi.fn()} pending={false} injectUrl={{ url: "https://a.test/x.m3u8", nonce: 1 }} />);
+      expect(screen.getByLabelText("URL del video")).toHaveValue("https://a.test/x.m3u8");
+      rerender(<JobForm onSubmit={vi.fn()} pending={false} injectUrl={{ url: "https://a.test/x.m3u8", nonce: 2 }} />);
+      expect(screen.getByLabelText("URL del video")).toHaveValue("https://a.test/x.m3u8");
+    });
   });
 });

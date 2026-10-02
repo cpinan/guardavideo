@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { debugLog, getDebugState } from "./debug";
-import { HealthSchema, type Job, JobSchema } from "./schemas";
+import { HealthSchema, type Job, JobSchema, StatsSchema } from "./schemas";
 
 const ROOT = import.meta.env.VITE_API_URL ?? "";
 const BASE = `${ROOT}/api/v1`;
@@ -81,6 +81,8 @@ export const deleteJob = async (id: string): Promise<void> => {
 export const cancelJob = (id: string) => request(api(`/jobs/${id}`), JobSchema, json("DELETE"));
 
 export const retryJob = (id: string) => request(api(`/jobs/${id}/retry`), JobSchema, json("POST"));
+
+export const getStats = () => request(api("/jobs/stats"), StatsSchema);
 
 export const getHealth = () => request(`${ROOT}/health`, HealthSchema);
 

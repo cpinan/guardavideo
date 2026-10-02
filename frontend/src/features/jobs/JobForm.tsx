@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { storage } from "../../lib/storage";
+import { showToast } from "../../lib/toast";
 import { detectSource, isValidUrl } from "./url";
 
 const DRAFT_KEY = "hlsweb:draft:v1";
@@ -12,6 +13,8 @@ interface Props {
   onSubmit: (url: string, quality: number | undefined, mode: SubmitMode) => Promise<unknown> | void;
   pending: boolean;
   error?: string;
+  /** Rellena el campo desde fuera (p. ej. "usar enlace de ejemplo"). `nonce` distingue repeticiones. */
+  injectUrl?: { url: string; nonce: number };
 }
 
 function loadDraft(): { url: string; quality: string } {
@@ -23,7 +26,7 @@ function loadDraft(): { url: string; quality: string } {
   }
 }
 
-export function JobForm({ onSubmit, pending, error }: Props) {
+export function JobForm({ onSubmit, pending, error, injectUrl }: Props) {
   const urlId = useId();
   const qualityId = useId();
   const hintId = useId();
@@ -32,6 +35,24 @@ export function JobForm({ onSubmit, pending, error }: Props) {
   const [quality, setQuality] = useState(draft.quality);
   const [touched, setTouched] = useState(false);
   const [sending, setSending] = useState<SubmitMode | null>(null);
+
+  useEffect(() => {
+    if (injectUrl) setUrl(injectUrl.url);
+  }, [injectUrl]);
+
+  async function paste() {
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (isValidUrl(text)) {
+        setUrl(text);
+        setTouched(true);
+      } else {
+        showToast("El portapapeles no tiene un enlace http(s) válido.");
+      }
+    } catch {
+      showToast("No se pudo leer el portapapeles. Pega con Ctrl/Cmd+V.");
+    }
+  }
 
   // Borrador: si se recarga la página (o falla el envío) no se pierde lo escrito.
   useEffect(() => {
@@ -67,6 +88,7 @@ export function JobForm({ onSubmit, pending, error }: Props) {
     >
       <div className="field grow">
         <label htmlFor={urlId}>URL del video</label>
+        <div className="input-row">
         <input
           id={urlId}
           type="url"
@@ -83,6 +105,12 @@ export function JobForm({ onSubmit, pending, error }: Props) {
           inputMode="url"
           enterKeyHint="go"
         />
+        {typeof navigator !== "undefined" && typeof navigator.clipboard?.readText === "function" && (
+          <button type="button" className="btn ghost" onClick={() => void paste()}>
+            Pegar
+          </button>
+        )}
+        </div>
         {showInvalid && (
           <p id={hintId} role="alert" className="err">
             Ingresa una URL http(s) válida

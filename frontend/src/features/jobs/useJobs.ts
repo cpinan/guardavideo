@@ -52,6 +52,21 @@ export function useDeleteJob() {
   });
 }
 
+/** "Limpiar con error": elimina varios registros a la vez. */
+export function useDeleteMany() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const results = await Promise.allSettled(ids.map((id) => deleteJob(id)));
+      return ids.filter((_, i) => results[i]?.status === "fulfilled");
+    },
+    onSuccess: (deleted) => {
+      deleted.forEach(clearPlayback);
+      qc.setQueryData<Job[]>(JOBS_KEY, (old = []) => old.filter((j) => !deleted.includes(j.id)));
+    },
+  });
+}
+
 export function useRetryJob() {
   const qc = useQueryClient();
   return useMutation({

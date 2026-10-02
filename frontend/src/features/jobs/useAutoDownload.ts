@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { fileUrl } from "../../lib/api";
 import { autoDownload, triggerDownload } from "../../lib/autodownload";
+import { showToast } from "../../lib/toast";
+import { displayTitle } from "../../lib/title";
 import { useJobsQuery } from "./useJobs";
 
 /**
@@ -15,6 +17,7 @@ export function useAutoDownload() {
       if (job.status === "done") {
         autoDownload.remove(job.id); // primero quitar: StrictMode ejecuta el efecto dos veces
         triggerDownload(fileUrl(job));
+        showToast(`Descarga iniciada: ${displayTitle(job)}`, { label: "Descargar otra vez", href: fileUrl(job) });
       } else if (job.status === "error" || job.status === "cancelled") {
         autoDownload.remove(job.id);
       }

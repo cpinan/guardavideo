@@ -20,6 +20,9 @@ export const JobSchema = z.object({
 });
 export type Job = z.infer<typeof JobSchema>;
 
+export const StatsSchema = z.object({ videos: z.number(), bytes: z.number(), disk_free_bytes: z.number() });
+export type Stats = z.infer<typeof StatsSchema>;
+
 export const HealthSchema = z.object({ status: z.string(), debug: z.boolean().default(false) });
 
 export const isActive = (job: Job) => job.status === "queued" || job.status === "running";

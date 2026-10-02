@@ -14,6 +14,7 @@ const EntrySchema = z.object({
   t: z.number().min(0), // segundo actual
   d: z.number().min(0), // duración total
   open: z.boolean().default(false), // reproductor abierto
+  lightbox: z.boolean().default(false), // ampliado a pantalla completa de la página
   watched: z.boolean().default(false), // llegó al final
   at: z.number().default(0),
 });
@@ -54,7 +55,7 @@ if (typeof window !== "undefined") {
 export const getPlayback = (id: string): Playback | undefined => state[id];
 
 export function savePlayback(id: string, patch: Partial<Omit<Playback, "at">>) {
-  const base: Playback = state[id] ?? { t: 0, d: 0, open: false, watched: false, at: 0 };
+  const base: Playback = state[id] ?? { t: 0, d: 0, open: false, lightbox: false, watched: false, at: 0 };
   state = { ...state, [id]: { ...base, ...patch, at: Date.now() } };
   listeners.forEach((l) => l());
   timer ??= setTimeout(persist, PERSIST_MS);

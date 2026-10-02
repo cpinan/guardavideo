@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { resetDebugState, setSimulatedOffline } from "./lib/debug";
 import { autoDownload } from "./lib/autodownload";
+import { resetToasts } from "./lib/toast";
 import { JOBS_CACHE_KEY } from "./lib/persist";
 import { FakeEventSource, job, renderWithClient } from "./test/utils";
 
@@ -21,6 +22,7 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
+  resetToasts();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   resetDebugState();
@@ -77,7 +79,7 @@ describe("App (integración con fetch simulado)", () => {
       vi.stubGlobal(
         "fetch",
         vi.fn((url: string) =>
-          url === "/health" ? json({ status: "ok", debug: false }) : new Promise<Response>((r) => (resolve = r)),
+          url === "/api/v1/jobs" ? new Promise<Response>((r) => (resolve = r)) : json({ status: "ok", debug: false }),
         ),
       );
 
@@ -238,6 +240,8 @@ describe("App (integración con fetch simulado)", () => {
       act(() => FakeEventSource.instances[0]!.emit(job({ status: "done", percent: 100 })));
 
       await waitFor(() => expect(clicks).toEqual(["/api/v1/jobs/abc/file"]));
+      expect(await screen.findByText(/Descarga iniciada/)).toBeInTheDocument(); // aviso visible
+      expect(screen.getByRole("link", { name: "Descargar otra vez" })).toHaveAttribute("href", "/api/v1/jobs/abc/file");
       expect(autoDownload.has("abc")).toBe(false);
       act(() => FakeEventSource.instances[0]!.emit(job({ status: "done", percent: 100, title: "otra vez" })));
       expect(clicks).toHaveLength(1); // no se repite
@@ -289,5 +293,14 @@ describe("App (integración con fetch simulado)", () => {
       renderWithClient(<App />);
       await waitFor(() => expect(clicks).toEqual(["/api/v1/jobs/abc/file"]));
     });
+  });
+
+  it("el enlace de ejemplo del estado vacío rellena el formulario", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", vi.fn(() => json([])));
+    renderWithClient(<App />);
+    await user.click(await screen.findByRole("button", { name: "Probar con un enlace de ejemplo" }));
+    expect((screen.getByLabelText("URL del video") as HTMLInputElement).value).toMatch(/\.m3u8$/);
+    expect(screen.getByText("Stream HLS directo")).toBeInTheDocument();
   });
 });
