@@ -54,6 +54,7 @@ class DebugDownloader:
         if scenario not in SCENARIOS:
             raise ValueError(f"Escenario desconocido: {scenario}")
 
+        ctx.title(f"Debug · {scenario}")
         if scenario != "fail":
             self._preview(ctx, dest_dir, job_id, 0)  # el sitio "publica" su miniatura al inicio
         if scenario == "fail":

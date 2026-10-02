@@ -107,6 +107,8 @@ class HlsDownloader:
         if not shutil.which("ffmpeg"):
             raise RuntimeError("ffmpeg no está instalado")
         out_path = dest_dir / f"{job_id}.mp4"
+        if stem := Path(urlparse(url).path).stem:
+            ctx.title(stem)
 
         with (
             httpx.Client(headers=HEADERS, follow_redirects=True, timeout=self._timeout) as client,

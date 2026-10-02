@@ -121,3 +121,45 @@ def test_recovery_backfills_missing_durations(tmp_path: Path) -> None:
     recover_jobs(repo, tmp_path)
     assert repo.get("old").duration_seconds == pytest.approx(2.0, abs=0.3)
     repo.close()
+
+
+def test_stats_counts_each_file_once(make_client: ClientFactory) -> None:
+    client = make_client()
+    assert client.get("/api/v1/jobs/stats").json()["videos"] == 0
+    for n in (1, 2):  # mismo contenido por dos URLs -> un solo archivo
+        job_id = client.post("/api/v1/jobs", json={"url": f"{URL}?m={n}"}).json()["id"]
+        wait_for(client, job_id, {"done"})
+    stats = client.get("/api/v1/jobs/stats").json()
+    assert stats["videos"] == 1 and stats["bytes"] == len(b"fake-video")
+    assert stats["disk_free_bytes"] > 0
+
+
+def test_title_is_known_before_the_download_finishes(make_client: ClientFactory) -> None:
+    import threading
+
+    from tests.conftest import FakeDownloader
+
+    class Titled(FakeDownloader):
+        def download(self, url, dest_dir, job_id, quality, ctx):  # type: ignore[no-untyped-def]
+            ctx.title("Título temprano")
+            return super().download(url, dest_dir, job_id, quality, ctx)
+
+    hold = threading.Event()
+    fake = Titled(hold=hold)
+    client = make_client(fake)
+    job_id = client.post("/api/v1/jobs", json={"url": URL}).json()["id"]
+    assert fake.started.wait(5)
+    try:
+        assert client.get(f"/api/v1/jobs/{job_id}").json()["title"] == "Título temprano"
+    finally:
+        hold.set()
+
+
+def test_download_filename_keeps_readable_punctuation(make_client: ClientFactory) -> None:
+    from urllib.parse import unquote
+
+    client = make_client(DebugDownloader(tick=0.005), debug=True, allow_private_urls=False)
+    job_id = client.post("/api/v1/jobs", json={"url": "http://debug.test/ok"}).json()["id"]
+    wait_for(client, job_id, {"done"})
+    disposition = unquote(client.get(f"/api/v1/jobs/{job_id}/file").headers["content-disposition"])
+    assert "Debug ok.mp4" in disposition and "  " not in disposition

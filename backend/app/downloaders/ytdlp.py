@@ -56,6 +56,8 @@ class YtDlpDownloader:
         with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)  # 1) metadatos y formatos
             state["streams"] = len(info.get("requested_formats") or [info])
+            if isinstance(info.get("title"), str) and info["title"]:
+                ctx.title(info["title"])  # la UI deja de mostrar la URL cruda
             remote = info.get("thumbnail")  # vista previa inmediata, antes de bajar el video
             if isinstance(remote, str) and fetch_remote(
                 remote, thumb_path(dest_dir, job_id), allow_private=self._allow_private

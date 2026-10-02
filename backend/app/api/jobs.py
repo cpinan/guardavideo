@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import FileResponse, StreamingResponse
 
 from app.domain import Job
-from app.schemas import JobCreate, JobRead
+from app.schemas import JobCreate, JobRead, Stats
 from app.services.jobs import JobService
 
 router = APIRouter(prefix="/api/v1/jobs", tags=["jobs"])
@@ -35,6 +35,11 @@ def create_job(body: JobCreate, service: Service, response: Response) -> Job:
 @router.get("", response_model=list[JobRead])
 def list_jobs(service: Service) -> list[Job]:
     return service.list()
+
+
+@router.get("/stats", response_model=Stats)
+def library_stats(service: Service) -> dict[str, int]:
+    return service.stats()
 
 
 @router.get("/{job_id}", response_model=JobRead)
@@ -101,5 +106,5 @@ def stream_file(job_id: str, service: Service) -> FileResponse:
 def get_file(job_id: str, service: Service) -> FileResponse:
     job = service.file_for(job_id)
     assert job.file_path is not None
-    safe = re.sub(r"[^\w\- ]+", "", job.title or job.id).strip() or job.id
+    safe = re.sub(r"\s+", " ", re.sub(r"[^\w\-.() ]+", " ", job.title or job.id)).strip() or job.id
     return FileResponse(job.file_path, filename=f"{safe}{job.file_path.suffix}")

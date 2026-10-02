@@ -17,6 +17,7 @@ class DownloadContext:
     cancel: threading.Event = field(default_factory=threading.Event)
     report_retry: Callable[[int], None] = lambda attempt: None
     report_thumbnail: Callable[[Path], None] = lambda path: None
+    report_title: Callable[[str], None] = lambda title: None
     _last: float = field(default=-1.0, init=False, repr=False)
 
     def check_cancelled(self) -> None:
@@ -26,6 +27,10 @@ class DownloadContext:
     def retrying(self, attempt: int) -> None:
         """Avisa que hubo un fallo de red recuperable (attempt=0 significa que ya se recuperó)."""
         self.report_retry(attempt)
+
+    def title(self, title: str) -> None:
+        """Avisa el título apenas se conoce (la UI lo muestra mientras descarga)."""
+        self.report_title(title)
 
     def thumbnail(self, path: Path) -> None:
         """Avisa que hay una miniatura nueva (JPEG) para mostrar mientras dura la descarga."""

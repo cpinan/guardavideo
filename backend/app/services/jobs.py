@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import shutil
 import threading
 import uuid
 from collections.abc import AsyncIterator, Sequence
@@ -115,6 +116,19 @@ class JobService:
             raise JobNotFoundError(f"{job_id}: sin miniatura")
         return job.thumbnail_path
 
+    def stats(self) -> dict[str, int]:
+        """Resumen de la biblioteca. Un archivo compartido por varios jobs se cuenta una vez."""
+        files: dict[Path, int] = {}
+        for job in self._repo.list():
+            if job.status == Status.done and job.file_path is not None and job.file_path.exists():
+                files[job.file_path] = job.file_path.stat().st_size
+        folder = Path(self._settings.download_dir)
+        return {
+            "videos": len(files),
+            "bytes": sum(files.values()),
+            "disk_free_bytes": shutil.disk_usage(folder).free if folder.exists() else 0,
+        }
+
     def delete(self, job_id: str) -> None:
         """Quita del historial un job terminado, junto con su video y su miniatura."""
         with self._lock:
@@ -181,6 +195,9 @@ class JobService:
         def report_retry(attempt: int) -> None:
             self._repo.update(job_id, retries=attempt)
 
+        def report_title(title: str) -> None:
+            self._repo.update(job_id, title=title[:200])
+
         def report_thumbnail(path: Path) -> None:
             rev = self._repo.get(job_id).thumbnail_rev + 1
             self._repo.update(job_id, thumbnail_path=path, thumbnail_rev=rev)
@@ -190,6 +207,7 @@ class JobService:
             cancel=cancel,
             report_retry=report_retry,
             report_thumbnail=report_thumbnail,
+            report_title=report_title,
         )
         try:
             downloader = select_downloader(job.url, self._downloaders)

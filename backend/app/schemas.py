@@ -14,6 +14,12 @@ class JobCreate(BaseModel):
     force: bool = False  # descargar de nuevo aunque ya exista
 
 
+class Stats(BaseModel):
+    videos: int  # archivos distintos en disco
+    bytes: int
+    disk_free_bytes: int
+
+
 class JobRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
