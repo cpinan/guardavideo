@@ -47,10 +47,16 @@ Para probar con un stream en localhost (desactiva la protección SSRF; **solo de
 HLSWEB_ALLOW_PRIVATE_URLS=true make dev-api
 ```
 
-### Desde el móvil (misma red Wi-Fi)
+### Desde el móvil
+Con la API corriendo (`make dev-api`), en otra terminal:
 ```bash
-cd frontend && npm run dev -- --host     # abre http://<ip-de-tu-pc>:5173 en el teléfono
+make share      # imprime las URL para el teléfono y abre el frontend en la red
 ```
+- **Misma Wi-Fi:** abre la URL `http://<ip-de-tu-pc>:5173` que imprime.
+- **Desde cualquier lugar (gratis, privado):** instala [Tailscale](https://tailscale.com/download) en el equipo y el
+  teléfono, con la misma cuenta; abre `http://<nombre>.<tailnet>.ts.net:5173`. No se expone nada a internet.
+- Solo el puerto 5173 queda visible; la API escucha en `localhost` y el proxy de Vite la alcanza.
+- Esta app **no tiene login**: úsala solo en redes de confianza (tu Wi-Fi o tu tailnet), nunca expuesta a internet.
 
 ## Pruebas
 Todo se ejecuta desde la raíz con `make`:
