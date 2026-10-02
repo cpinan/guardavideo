@@ -20,6 +20,9 @@ Descarga videos desde el navegador con progreso en vivo. API FastAPI + frontend 
   modo no corta la reproducción.
 - **Biblioteca**: filtros (todas / en curso / listas / con error), búsqueda, grupos por día, resumen de espacio,
   "Limpiar con error", errores traducidos a lenguaje claro y avisos (toasts) al iniciar descargas.
+- **Estantes de la biblioteca**: *Seguir viendo*, *Favoritos* ★, *Más vistos* y *Recién descargados*; filtro de
+  favoritos y orden por recientes / vistas / nombre / tamaño. Favoritos y vistas se guardan en la base de datos
+  (valen desde el teléfono y el computador); *Seguir viendo* usa la posición guardada en cada navegador.
 - **Interfaz**: tema claro/oscuro/sistema, diseño de dos columnas en pantallas anchas, instalable como app (PWA).
 - **Progreso en vivo** (SSE) con anillo/barra animada, tiempo restante, miniatura y duración del video.
 - **Historial local en SQLite**: las descargas sobreviven a reinicios; se pueden reintentar o eliminar.
@@ -73,7 +76,7 @@ Todo se ejecuta desde la raíz con `make`:
 | `make lint` · `make typecheck` | ruff + eslint · mypy + tsc |
 | **`make check`** | **Todo lo anterior + build.** Es lo que corre el CI |
 
-Estado actual: **123 pruebas de backend** (pytest) y **248 de frontend** (Vitest + Testing Library).
+Estado actual: **131 pruebas de backend** (pytest) y **276 de frontend** (Vitest + Testing Library).
 
 **Backend** (`backend/tests/`)
 - Unitarias: repositorios (memoria y SQLite con el mismo contrato), config, hashing, seguridad SSRF, registro de descargadores.

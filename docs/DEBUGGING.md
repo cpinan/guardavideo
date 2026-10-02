@@ -56,6 +56,14 @@ puede forzar con `http://localhost:5173/?debug`.
 - Los escenarios `debug.test/*` generan un MP4 real de 12 s: sirven para probar el reproductor sin red.
 - Probar: escenario `ok` → **Reproducir** → avanza a ~0:05 → recarga la página: continúa en 0:05 con el reproductor abierto.
 
+## Favoritos, vistas y estantes
+- `PATCH /api/v1/jobs/{id}` `{"starred": bool}` y `POST /api/v1/jobs/{id}/view` (solo jobs terminados; 409 si no).
+  La UI cuenta **una vista por sesión de reproductor**, en el primer `play` (cambiar a lightbox/PiP no suma otra).
+- Estrella optimista: cambia al instante y se revierte si el servidor falla.
+- Estantes: *Seguir viendo* (posición local, 2 % a 98 % visto), *Favoritos*, *Más vistos* y *Recién descargados*
+  (últimos 7 días). Los dos últimos aparecen con 4+ videos para no repetir lo mismo. Se ocultan al buscar o filtrar.
+- BD v4: columnas `starred`, `view_count`, `last_viewed_at` (migración con `ALTER TABLE`).
+
 ## Lightbox, PiP y biblioteca
 - Reproductor: **Ampliar** abre el lightbox (diálogo modal: Esc o clic fuera cierran, el foco queda dentro). Es el
   mismo `<video>` que el de la tarjeta, así que no se corta al ampliar/reducir. **Picture-in-Picture** solo aparece
@@ -67,7 +75,7 @@ puede forzar con `http://localhost:5173/?debug`.
 ## Base de datos local (SQLite)
 - Archivo: `<HLSWEB_DOWNLOAD_DIR>/hlsweb.db` (o `HLSWEB_DB_PATH`). Inspección: `sqlite3 backend/downloads/hlsweb.db 'select id,status,size_bytes,file_path from jobs'`.
 - Guarda cada descarga (estado, título, tamaño, fecha, rutas, hashes). Sobrevive a reinicios del servidor.
-- Migraciones con `PRAGMA user_version` (hoy v3); una BD más nueva que la app se rechaza.
+- Migraciones con `PRAGMA user_version` (hoy v4); una BD más nueva que la app se rechaza.
 - Al arrancar (`services/recovery.py`): en cola/descargando → error "Interrumpido…" (se puede **Reintentar**);
   "listo" sin archivo en disco → error "El archivo ya no existe"; miniaturas desaparecidas se olvidan.
   Un apagado normal (Ctrl+C) deja los jobs en curso como *cancelados*; un crash, como *error*.
