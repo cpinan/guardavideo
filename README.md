@@ -12,7 +12,11 @@ Descarga videos desde el navegador con progreso en vivo. API FastAPI + frontend 
 ## Qué hace
 - **Enlace `.m3u8` directo** → descargador HLS propio (segmentos en paralelo, AES-128, ffmpeg).
 - **Cualquier otro sitio** (YouTube, Vimeo, Dailymotion…) → yt-dlp.
-- **Progreso en vivo** (SSE) con anillo/barra animada, tiempo restante y miniatura del video.
+- **Dos botones**: **Procesar y descargar** (al terminar, el navegador baja el archivo solo, incluso si
+  recargas la página mientras procesa) y **Solo procesar** (queda en la lista para verlo o bajarlo después).
+- **Reproductor en línea** (botón *Reproducir*): vista previa con Range (saltas a cualquier minuto sin bajar
+  todo). Guarda minuto y segundo; al recargar sigue donde lo dejaste y muestra *Visto 1:23 / 5:00*.
+- **Progreso en vivo** (SSE) con anillo/barra animada, tiempo restante, miniatura y duración del video.
 - **Historial local en SQLite**: las descargas sobreviven a reinicios; se pueden reintentar o eliminar.
 - **Sin descargas repetidas**: huella SHA-256 por URL+calidad y por contenido del archivo.
 - **Resiliencia**: reintentos con backoff ante cortes de red (backend y frontend), reconexión del SSE,
@@ -58,13 +62,14 @@ Todo se ejecuta desde la raíz con `make`:
 | `make lint` · `make typecheck` | ruff + eslint · mypy + tsc |
 | **`make check`** | **Todo lo anterior + build.** Es lo que corre el CI |
 
-Estado actual: **111 pruebas de backend** (pytest) y **139 de frontend** (Vitest + Testing Library).
+Estado actual: **120 pruebas de backend** (pytest) y **179 de frontend** (Vitest + Testing Library).
 
 **Backend** (`backend/tests/`)
 - Unitarias: repositorios (memoria y SQLite con el mismo contrato), config, hashing, seguridad SSRF, registro de descargadores.
 - API con un `FakeDownloader`: ciclo de vida, cancelar, reintentar, eliminar, SSE, 404/409/422.
 - SQLite: persistencia entre reinicios, migraciones, recuperación al arrancar, escrituras concurrentes.
 - Duplicados: por URL y por contenido, archivos compartidos entre jobs.
+- Reproducción: stream con `Range` (206), duración con ffprobe, migración v2→v3, relleno de duraciones.
 - Integración con ffmpeg (`@pytest.mark.integration`): HLS plano y AES-128, servidor que falla a propósito
   (reintentos, backoff cancelable, 4xx sin reintento), miniaturas.
 - Los tests esperan con `wait_for`, nunca con `sleep` fijos.
@@ -72,7 +77,8 @@ Estado actual: **111 pruebas de backend** (pytest) y **139 de frontend** (Vitest
 **Frontend** (`frontend/src/**/*.test.*`)
 - Cliente HTTP + zod, reintentos y backoff, caché local (`persist`), red simulada, ETA y formatos.
 - Hooks: reconexión del SSE, parcheo de la caché sin tocar las demás filas.
-- Componentes por rol/label (accesibilidad): formulario, tarjetas, lista, panel de depuración, `App` completa.
+- Componentes por rol/label (accesibilidad): formulario (ambos botones), tarjetas, lista, panel de depuración, `App` completa.
+- Descarga automática (una sola vez, tras recargar, se cancela si falla) y reproductor (reanuda, guarda cada segundo, marca "visto").
 
 Un solo test:
 ```bash

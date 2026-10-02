@@ -45,10 +45,21 @@ puede forzar con `http://localhost:5173/?debug`.
   (salvo 408/429) no se reintenta; cancelar interrumpe la espera.
 - Job fallido/cancelado: `POST /api/v1/jobs/{id}/retry` lo vuelve a encolar con el mismo id.
 
+## Descarga automática y reproductor
+| Qué | Dónde se guarda | Notas |
+|---|---|---|
+| Pedidos "Procesar y descargar" pendientes | `localStorage` `hlsweb:auto:v1` | Se quitan al descargar o si el job falla/cancela |
+| Posición, duración, visto, reproductor abierto | `localStorage` `hlsweb:playback:v1` | Guarda cada ~1 s, al pausar/saltar y al cerrar la pestaña; máx. 200 videos |
+| Duración del video | BD (`duration_seconds`, ffprobe) | Se rellena al terminar y, al arrancar, para videos antiguos |
+
+- `GET /jobs/{id}/stream` sirve el archivo en línea con `Range` (lo que usa `<video>`); `GET /jobs/{id}/file` fuerza la descarga.
+- Los escenarios `debug.test/*` generan un MP4 real de 12 s: sirven para probar el reproductor sin red.
+- Probar: escenario `ok` → **Reproducir** → avanza a ~0:05 → recarga la página: continúa en 0:05 con el reproductor abierto.
+
 ## Base de datos local (SQLite)
 - Archivo: `<HLSWEB_DOWNLOAD_DIR>/hlsweb.db` (o `HLSWEB_DB_PATH`). Inspección: `sqlite3 backend/downloads/hlsweb.db 'select id,status,size_bytes,file_path from jobs'`.
 - Guarda cada descarga (estado, título, tamaño, fecha, rutas, hashes). Sobrevive a reinicios del servidor.
-- Migraciones con `PRAGMA user_version` (hoy v2); una BD más nueva que la app se rechaza.
+- Migraciones con `PRAGMA user_version` (hoy v3); una BD más nueva que la app se rechaza.
 - Al arrancar (`services/recovery.py`): en cola/descargando → error "Interrumpido…" (se puede **Reintentar**);
   "listo" sin archivo en disco → error "El archivo ya no existe"; miniaturas desaparecidas se olvidan.
   Un apagado normal (Ctrl+C) deja los jobs en curso como *cancelados*; un crash, como *error*.

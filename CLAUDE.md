@@ -26,7 +26,8 @@ backend/app/
   thumbnails.py     fotograma JPEG por job (ffmpeg); nunca debe romper una descarga
 frontend/src/
   lib/              api.ts (fetch + zod), schemas.ts, retry.ts (backoff), persist.ts (caché local), debug.ts
-  features/jobs/    JobForm, JobList, JobRow, useJobs, useJobEvents (+ tests al lado)
+  features/jobs/    JobForm, JobList, JobRow, JobPlayer, useJobs, useJobEvents, useAutoDownload (+ tests al lado)
+  lib/ (más)        autodownload.ts y playback.ts: estado en localStorage con useSyncExternalStore
 docs/               ARCHITECTURE.md, INTERVIEW_CASES.md
 ```
 
@@ -41,6 +42,7 @@ docs/               ARCHITECTURE.md, INTERVIEW_CASES.md
 
 **Frontend**
 - TypeScript estricto, hooks y componentes funcionales, código por feature.
+- Estado de UI que debe sobrevivir a recargas (descarga automática, posición del video) vive en `lib/*` con localStorage validado con zod; el estado del servidor, en React Query.
 - Mutaciones (POST/DELETE) nunca se reintentan solas. La caché local (`persist.ts`) siempre se valida con zod; el servidor manda.
 - Server state solo en React Query; el SSE parchea la caché con `replaceJob` (conserva referencias; `JobRow` usa `React.memo`). No dupliques jobs en `useState`.
 - Todo dato de red pasa por zod. Accesibilidad obligatoria: label visible, `aria-invalid`/`aria-describedby`, `role="alert"` en errores, foco visible.
