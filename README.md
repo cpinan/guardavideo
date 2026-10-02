@@ -47,8 +47,12 @@ make install          # dependencias de backend y frontend
 make dev-api          # terminal 1 → http://localhost:8000/docs
 make dev-web          # terminal 2 → http://localhost:5173
 ```
-Pega una URL, elige la calidad y pulsa **Descargar**. Los videos quedan en `backend/downloads/`
-(junto a la base `hlsweb.db`); desde la tarjeta puedes **Descargar** el archivo, **Reintentar** o **Eliminar**.
+Pega una URL, elige la calidad y pulsa:
+- **Procesar y descargar**: procesa y, al terminar, el navegador baja el archivo solo.
+- **Solo procesar**: queda en tu biblioteca; la ves en el reproductor o la bajas cuando quieras.
+
+Los videos quedan en `backend/downloads/` (junto a la base `hlsweb.db`). Desde cada tarjeta puedes
+**Reproducir** (o ampliar a lightbox / Picture-in-Picture), **Descargar**, marcar ★, **Reintentar** o **Eliminar**.
 
 Para probar con un stream en localhost (desactiva la protección SSRF; **solo desarrollo**):
 ```bash
@@ -60,7 +64,10 @@ Con la API corriendo (`make dev-api`), en otra terminal:
 ```bash
 make share      # imprime las URL para el teléfono y abre el frontend en la red
 ```
-- **Misma Wi-Fi:** abre la URL `http://<ip-de-tu-pc>:5173` que imprime.
+- **Misma Wi-Fi:** abre la URL `http://<ip-de-tu-pc>:5173` que imprime (teléfono y computador en la misma red;
+  si no carga, revisa que la Wi-Fi no tenga "aislamiento de clientes" y que no uses datos móviles).
+- **Probar sin red real:** añade `?debug` a la URL y lanza un escenario del panel 🐞 (requiere `make dev-api-debug`).
+- **Instalar como app:** en Android Chrome *Menú → Instalar aplicación*; en iOS Safari *Compartir → Añadir a pantalla de inicio*.
 - **Desde cualquier lugar (gratis, privado):** instala [Tailscale](https://tailscale.com/download) en el equipo y el
   teléfono, con la misma cuenta; abre `http://<nombre>.<tailnet>.ts.net:5173`. No se expone nada a internet.
 - Solo el puerto 5173 queda visible; la API escucha en `localhost` y el proxy de Vite la alcanza.
@@ -83,7 +90,9 @@ Estado actual: **131 pruebas de backend** (pytest) y **276 de frontend** (Vitest
 - API con un `FakeDownloader`: ciclo de vida, cancelar, reintentar, eliminar, SSE, 404/409/422.
 - SQLite: persistencia entre reinicios, migraciones, recuperación al arrancar, escrituras concurrentes.
 - Duplicados: por URL y por contenido, archivos compartidos entre jobs.
-- Reproducción: stream con `Range` (206), duración con ffprobe, migración v2→v3, relleno de duraciones.
+- Reproducción: stream con `Range` (206), duración con ffprobe, relleno de duraciones.
+- Biblioteca: favoritos y vistas (atómicas con concurrencia), estadísticas sin contar dos veces archivos compartidos.
+- Migraciones SQLite v1→v4 con datos intactos, y rechazo de una BD más nueva que la app.
 - Integración con ffmpeg (`@pytest.mark.integration`): HLS plano y AES-128, servidor que falla a propósito
   (reintentos, backoff cancelable, 4xx sin reintento), miniaturas.
 - Los tests esperan con `wait_for`, nunca con `sleep` fijos.
@@ -93,6 +102,9 @@ Estado actual: **131 pruebas de backend** (pytest) y **276 de frontend** (Vitest
 - Hooks: reconexión del SSE, parcheo de la caché sin tocar las demás filas.
 - Componentes por rol/label (accesibilidad): formulario (ambos botones), tarjetas, lista, panel de depuración, `App` completa.
 - Descarga automática (una sola vez, tras recargar, se cancela si falla) y reproductor (reanuda, guarda cada segundo, marca "visto").
+- Lightbox (Esc, clic fuera, foco atrapado, mismo `<video>` al cambiar de modo) y Picture-in-Picture (soportado, rechazado, oculto mientras suena).
+- Biblioteca: estantes (seguir viendo / favoritos / más vistos / recientes), filtros, orden, búsqueda, grupos por día,
+  estrella optimista con reversión, errores traducidos, avisos, tema y portapapeles.
 
 Un solo test:
 ```bash
@@ -116,11 +128,13 @@ carpeta y base de datos, concurrencia, reintentos de red, CORS, modo debug.
 ## Arquitectura
 ```
 backend/app/   api → services → repositories (SQLite) / downloaders (hls, yt-dlp)   ·   security (SSRF)
-frontend/src/  lib (api+zod, retry, persist, debug)  ·  features/jobs  ·  features/debug
+frontend/src/  lib (api+zod, retry, persist, playback, shelves, theme, toast, debug)  ·  features/jobs  ·  features/debug
 ```
 Más detalle en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Convenciones y flujo de trabajo en [`CLAUDE.md`](CLAUDE.md).
 
 ## Límites
 - Sin DRM (Widevine/FairPlay) y la protección SSRF (`security.py`) no se debilita fuera de desarrollo.
 - Mantén yt-dlp al día: `pip install -U yt-dlp`. Si un sitio falla tras actualizar, suele ser un cambio del sitio.
-- No probado aquí: sitios reales vía yt-dlp (sin red externa), el `Dockerfile` y el workflow de GitHub Actions.
+- Verificado a mano: descarga real de Dailymotion con yt-dlp y streams HLS locales. No probado: YouTube/Vimeo,
+  el `Dockerfile`, y reproducción/PiP en navegadores móviles reales (la lógica está cubierta por pruebas).
+- CI (GitHub Actions) corre `make check` en cada push.
