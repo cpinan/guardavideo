@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     # Con el proxy de Vite en desarrollo no hace falta CORS.
     # Ej: HLSWEB_CORS_ORIGINS='["https://app.example"]'
     cors_origins: list[str] = []
+    # Producción: carpeta del frontend compilado (frontend/dist). La API la sirve en "/" y ya no
+    # hace falta Vite: un solo puerto, mismo origen. Ej: HLSWEB_STATIC_DIR=../frontend/dist
+    static_dir: Path | None = None
     log_level: str = "INFO"
 
     @property

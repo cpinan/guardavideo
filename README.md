@@ -96,6 +96,21 @@ make share      # imprime las URL para el teléfono y abre el frontend en la red
 - Solo el puerto 5173 queda visible; la API escucha en `localhost` y el proxy de Vite la alcanza.
 - Esta app **no tiene login**: úsala solo en redes de confianza (tu Wi-Fi o tu tailnet), nunca expuesta a internet.
 
+### Compartir con otras personas (Tailscale)
+El código sigue privado: los invitados solo usan la app desde su navegador.
+```bash
+make serve             # compila el frontend y lo sirve con la API en 127.0.0.1:8080, sin modo debug
+make tailscale-serve   # en otra terminal: https://<tu-equipo>.<tailnet>.ts.net -> :8080, solo en tu tailnet
+```
+1. Abre Tailscale en el equipo e inicia sesión; en <https://login.tailscale.com/admin/dns> activa **HTTPS Certificates**.
+2. En <https://login.tailscale.com/admin/machines>, en tu equipo: **⋯ → Share…** e invita por correo.
+3. El invitado instala Tailscale, acepta la invitación y abre `https://<tu-equipo>.<tailnet>.ts.net`.
+
+- Funciona mientras el equipo esté encendido y despierto (`caffeinate -s` evita que se duerma).
+- La biblioteca es **compartida**: todos ven, reproducen y pueden borrar todos los videos.
+- No uses `make dev-api*` y `make serve` a la vez: comparten la base de datos y cada uno ejecuta la recuperación al arrancar.
+- Para dejar de compartir: `tailscale serve reset` y quita el acceso en la consola de Tailscale.
+
 ## Pruebas
 Todo se ejecuta desde la raíz con `make`:
 

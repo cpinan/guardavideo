@@ -1,4 +1,4 @@
-.PHONY: install dev-api dev-api-debug dev-web share ui-audit lint typecheck test test-fast check fmt clean
+.PHONY: install dev-api dev-api-debug dev-web share serve tailscale-serve ui-audit lint typecheck test test-fast check fmt clean
 
 install:  ## Instala dependencias de backend y frontend
 	cd backend && pip install -e ".[dev]"
@@ -36,6 +36,15 @@ clean:
 
 dev-api-debug:  ## API con escenarios simulados (http://debug.test/<escenario>) y URLs locales
 	cd backend && HLSWEB_DEBUG=true HLSWEB_ALLOW_PRIVATE_URLS=true uvicorn app.main:app --reload
+
+serve:  ## Producción local para compartir: frontend compilado + API en 127.0.0.1:8080, sin modo debug ni URLs privadas
+	cd frontend && npm run build
+	cd backend && HLSWEB_DEBUG=false HLSWEB_ALLOW_PRIVATE_URLS=false HLSWEB_STATIC_DIR=../frontend/dist \
+		uvicorn app.main:app --host 127.0.0.1 --port 8080
+
+tailscale-serve:  ## HTTPS solo dentro de tu tailnet hacia :8080 (Tailscale con sesión iniciada y HTTPS activado)
+	tailscale serve --bg 8080
+	tailscale serve status
 
 ui-audit:  ## Capturas + revisión de desborde/objetivos táctiles en Chrome headless (requiere dev-api y dev-web)
 	node tools/ui-audit.mjs http://localhost:5173/ ui-audit-out

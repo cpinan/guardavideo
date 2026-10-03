@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api import jobs
 from app.config import Settings
@@ -66,6 +67,12 @@ def create_app(
     @app.get("/health", tags=["ops"])
     def health() -> dict[str, object]:
         return {"status": "ok", "ffmpeg": shutil.which("ffmpeg") is not None, "debug": cfg.debug}
+
+    if cfg.static_dir is not None:
+        # Se monta al final: /api y /health se registraron antes y tienen prioridad.
+        if not (cfg.static_dir / "index.html").is_file():
+            raise RuntimeError(f"{cfg.static_dir} no tiene index.html: ejecuta `npm run build`")
+        app.mount("/", StaticFiles(directory=cfg.static_dir, html=True), name="frontend")
 
     return app
 
