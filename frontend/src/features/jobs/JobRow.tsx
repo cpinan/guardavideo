@@ -30,6 +30,8 @@ interface Props {
   onDelete?: (id: string) => void;
   /** Se resalta y se lleva a la vista (p. ej. "ya lo tenías descargado"). */
   highlight?: boolean;
+  /** Reproducir abre directo el reproductor ampliado (tarjeta estrecha del carrusel móvil). */
+  preferLightbox?: boolean;
 }
 
 const TrashIcon = () => (
@@ -49,7 +51,7 @@ const PlayIcon = () => (
 );
 
 /** memo: como solo cambia la referencia del job que recibió datos, el resto no se re-renderiza. */
-export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, highlight }: Props) {
+export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, highlight, preferLightbox }: Props) {
   const connection = useJobEvents(job);
   const willDownload = useWillAutoDownload(job.id);
   const playback = usePlayback(job.id);
@@ -64,7 +66,7 @@ export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, h
   const lightbox = playerOpen && (playback?.lightbox ?? false);
   // Cerrado pero con el video en Picture-in-Picture: el <video> sigue montado, oculto.
   const mode: PlayerMode | null = playerOpen ? (lightbox ? "lightbox" : "inline") : done && pipActive ? "hidden" : null;
-  const togglePlayer = () => savePlayback(job.id, { open: !playerOpen, lightbox: false });
+  const togglePlayer = () => savePlayback(job.id, { open: !playerOpen, lightbox: !playerOpen && !!preferLightbox });
   const closePlayer = () => savePlayback(job.id, { open: false, lightbox: false });
   const toggleLightbox = () => savePlayback(job.id, { open: true, lightbox: !lightbox });
 
@@ -144,7 +146,7 @@ export const JobRow = memo(function JobRow({ job, onCancel, onRetry, onDelete, h
           {done && (
             <a className="btn ghost" href={fileUrl(job)}>
               <DownIcon />
-              Descargar
+              <span className="btn-label">Descargar</span>
             </a>
           )}
           {isActive(job) && (

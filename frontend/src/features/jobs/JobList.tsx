@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { groupByDay } from "../../lib/group";
 import { SORTS, type SortKey, sortJobs } from "../../lib/shelves";
 import { JOBS_KEY } from "../../lib/keys";
+import { PHONE_QUERY, useMediaQuery } from "../../lib/media";
 import { isActive, type Job } from "../../lib/schemas";
 import { displayTitle } from "../../lib/title";
 import { JobRow } from "./JobRow";
@@ -70,6 +71,7 @@ export function JobList({ highlightId, onExample }: Props) {
   const [query, setQuery] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
   const [sort, setSort] = useState<SortKey>("recent");
+  const phone = useMediaQuery(PHONE_QUERY);
 
   const jobs = useMemo(() => (data ?? []).slice().reverse(), [data]); // más nuevo primero
   const failed = useMemo(() => jobs.filter(FILTERS.find((f) => f.id === "failed")!.test), [jobs]);
@@ -222,23 +224,46 @@ export function JobList({ highlightId, onExample }: Props) {
         </ul>
       )}
 
-      {groups.map((group) => (
-        <div key={group.label} className="day">
-          <h3 className="day-title">{group.label}</h3>
-          <ul className="jobs" aria-label={`Descargas · ${group.label}`}>
-            {group.jobs.map((job) => (
-              <JobRow
-                key={job.id}
-                job={job}
-                onCancel={cancel.mutate}
-                onRetry={retry.mutate}
-                onDelete={remove.mutate}
-                highlight={job.id === highlightId}
-              />
-            ))}
-          </ul>
-        </div>
-      ))}
+      {groups.map((group) => {
+        // Los terminados van en su propia lista: en el teléfono es un carrusel horizontal (CSS .rail);
+        // en curso / con error quedan a todo el ancho para que la barra y las acciones se lean bien.
+        const pending = group.jobs.filter((j) => j.status !== "done");
+        const finished = group.jobs.filter((j) => j.status === "done");
+        return (
+          <div key={group.label} className="day">
+            <h3 className="day-title">{group.label}</h3>
+            {pending.length > 0 && (
+              <ul className="jobs" aria-label={`Descargas · ${group.label}`}>
+                {pending.map((job) => (
+                  <JobRow
+                    key={job.id}
+                    job={job}
+                    onCancel={cancel.mutate}
+                    onRetry={retry.mutate}
+                    onDelete={remove.mutate}
+                    highlight={job.id === highlightId}
+                  />
+                ))}
+              </ul>
+            )}
+            {finished.length > 0 && (
+              <ul className="jobs rail" aria-label={`Listos · ${group.label}`}>
+                {finished.map((job) => (
+                  <JobRow
+                    key={job.id}
+                    job={job}
+                    onCancel={cancel.mutate}
+                    onRetry={retry.mutate}
+                    onDelete={remove.mutate}
+                    highlight={job.id === highlightId}
+                    preferLightbox={phone}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
     </section>
   );
 }
