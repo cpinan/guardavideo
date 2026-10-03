@@ -26,3 +26,4 @@ graphify-out/
 *.db
 *.db-shm
 *.db-wal
+ui-audit-out/

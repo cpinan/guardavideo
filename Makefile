@@ -1,4 +1,4 @@
-.PHONY: install dev-api dev-api-debug dev-web share lint typecheck test test-fast check fmt clean
+.PHONY: install dev-api dev-api-debug dev-web share ui-audit lint typecheck test test-fast check fmt clean
 
 install:  ## Instala dependencias de backend y frontend
 	cd backend && pip install -e ".[dev]"
@@ -36,6 +36,9 @@ clean:
 
 dev-api-debug:  ## API con escenarios simulados (http://debug.test/<escenario>) y URLs locales
 	cd backend && HLSWEB_DEBUG=true HLSWEB_ALLOW_PRIVATE_URLS=true uvicorn app.main:app --reload
+
+ui-audit:  ## Capturas + revisión de desborde/objetivos táctiles en Chrome headless (requiere dev-api y dev-web)
+	node tools/ui-audit.mjs http://localhost:5173/ ui-audit-out
 
 share:  ## Frontend visible en tu red/Tailscale (la API sigue solo en localhost, vía el proxy de Vite)
 	@echo "Teléfono en la misma Wi-Fi: http://$$(ipconfig getifaddr en0 2>/dev/null || hostname -I | cut -d' ' -f1):5173"

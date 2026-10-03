@@ -8,6 +8,7 @@ API FastAPI + frontend React/TS para descargar videos con progreso en vivo (SSE)
 - `make dev-api-debug`: escenarios simulados (`http://debug.test/<escenario>`) + panel 🐞 en la UI. Ver `docs/DEBUGGING.md`.
 - `make test-fast` (backend sin ffmpeg) · `make test` · `make lint` · `make typecheck` · `make fmt`
 - **`make check` debe pasar antes de dar una tarea por terminada** (es lo mismo que corre el CI).
+- Cambios de CSS/layout: `make ui-audit` (con dev-api y dev-web corriendo) revisa teléfono/tablet/escritorio en claro y oscuro: desborde horizontal y objetivos táctiles < 44 px. Capturas en `ui-audit-out/`.
 - Un solo test: `cd backend && pytest tests/test_jobs_api.py::test_cancel_running_job -q` · `cd frontend && npx vitest run src/features/jobs/JobRow.test.tsx`
 - Requiere `ffmpeg` en el PATH. Para probar con streams en localhost: `HLSWEB_ALLOW_PRIVATE_URLS=true` (solo dev).
 
