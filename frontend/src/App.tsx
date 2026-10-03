@@ -15,7 +15,7 @@ import { showToast } from "./lib/toast";
 import { useDocumentTitle, useOnline, useRefetchOnReconnect } from "./lib/hooks";
 import { isActive } from "./lib/schemas";
 
-const APP_NAME = "HLS Web";
+const APP_NAME = "Guardavideo";
 /** Stream de prueba público de Apple (no requiere cuenta). */
 const EXAMPLE_URL = "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8";
 

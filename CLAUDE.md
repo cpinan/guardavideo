@@ -1,4 +1,4 @@
-# HLS Web
+# Guardavideo
 
 API FastAPI + frontend React/TS para descargar videos con progreso en vivo (SSE).
 `.m3u8` directo → descargador HLS propio; cualquier otro sitio → yt-dlp. Proyecto de aprendizaje, uso local.

@@ -1,4 +1,4 @@
-# HLS Web
+# Guardavideo
 
 Descarga videos desde el navegador con progreso en vivo. API FastAPI + frontend React/TypeScript.
 

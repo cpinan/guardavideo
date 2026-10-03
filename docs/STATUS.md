@@ -1,4 +1,4 @@
-# STATUS — HLS Web
+# STATUS — Guardavideo
 
 _Last updated: 2026-10-02 · branch `main` · 0 uncommitted files_
 

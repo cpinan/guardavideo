@@ -1,5 +1,5 @@
 [project]
-name = "hls-web"
+name = "guardavideo"
 version = "0.2.0"
 description = "API de descargas de video (HLS propio + yt-dlp) con progreso en vivo por SSE"
 requires-python = ">=3.11"

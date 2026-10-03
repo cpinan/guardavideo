@@ -1,6 +1,6 @@
 {
-  "name": "HLS Web",
-  "short_name": "HLS Web",
+  "name": "Guardavideo",
+  "short_name": "Guardavideo",
   "description": "Descarga videos con progreso en vivo.",
   "lang": "es",
   "start_url": "/",

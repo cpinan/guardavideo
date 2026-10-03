@@ -148,7 +148,7 @@ describe("App (integración con fetch simulado)", () => {
     it("el título de la pestaña refleja el progreso", async () => {
       vi.stubGlobal("fetch", vi.fn(() => json([job({ percent: 40 })])));
       renderWithClient(<App />);
-      await waitFor(() => expect(document.title).toBe("(1) 40% · HLS Web"));
+      await waitFor(() => expect(document.title).toBe("(1) 40% · Guardavideo"));
     });
   });
 

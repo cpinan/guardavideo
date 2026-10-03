@@ -40,7 +40,7 @@ def create_app(
         service.shutdown()
         repo.close()
 
-    app = FastAPI(title="HLS Web", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Guardavideo", version="0.2.0", lifespan=lifespan)
 
     if cfg.cors_origins:
         app.add_middleware(

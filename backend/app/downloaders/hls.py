@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from app.downloaders.base import DownloadContext, DownloadResult
 from app.thumbnails import extract_frame, thumb_path
 
-HEADERS = {"User-Agent": "Mozilla/5.0 (hls-web learning project)"}
+HEADERS = {"User-Agent": "Mozilla/5.0 (guardavideo learning project)"}
 
 
 def decrypt_aes128(data: bytes, key: bytes, iv: bytes) -> bytes:
