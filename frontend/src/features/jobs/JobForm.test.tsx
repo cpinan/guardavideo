@@ -76,6 +76,19 @@ describe("JobForm", () => {
     expect(screen.getByText("Stream HLS directo")).toBeInTheDocument();
   });
 
+  it("no deja enviar un sitio protegido con DRM y explica por qué", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<JobForm onSubmit={onSubmit} pending={false} />);
+    await user.type(screen.getByLabelText("URL del video"), "https://www.netflix.com/watch/1");
+
+    expect(screen.getByText("Netflix · protegido con DRM, no se puede descargar")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Procesar y descargar" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Solo procesar" })).toBeDisabled();
+    await user.keyboard("{Enter}");
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it("no envía dos veces mientras está pendiente", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

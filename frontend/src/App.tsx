@@ -5,6 +5,7 @@ import { Toaster } from "./components/Toaster";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { DebugPanel } from "./features/debug/DebugPanel";
 import { JobForm, type SubmitMode } from "./features/jobs/JobForm";
+import { ProvidersList } from "./features/jobs/ProvidersList";
 import { JobList } from "./features/jobs/JobList";
 import { LibraryStats } from "./features/jobs/LibraryStats";
 import { useAutoDownload } from "./features/jobs/useAutoDownload";
@@ -98,6 +99,7 @@ export default function App() {
             </div>
           )}
           <LibraryStats />
+          <ProvidersList />
         </div>
 
         <div className="content">

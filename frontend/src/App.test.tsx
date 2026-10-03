@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -202,7 +202,7 @@ describe("App (integración con fetch simulado)", () => {
       await user.click(await screen.findByRole("button", { name: "Procesar de nuevo" }));
 
       expect(await screen.findByText("En cola")).toBeInTheDocument();
-      expect(screen.getAllByRole("listitem")).toHaveLength(2);
+      expect(within(screen.getByRole("region", { name: "Descargas" })).getAllByRole("listitem")).toHaveLength(2);
       expect(screen.queryByText(/Ya tenías este video/)).not.toBeInTheDocument();
     });
   });

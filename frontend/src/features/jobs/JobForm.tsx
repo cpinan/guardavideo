@@ -30,6 +30,7 @@ export function JobForm({ onSubmit, pending, error, injectUrl }: Props) {
   const urlId = useId();
   const qualityId = useId();
   const hintId = useId();
+  const sourceId = useId();
   const [draft] = useState(loadDraft);
   const [url, setUrl] = useState(draft.url);
   const [quality, setQuality] = useState(draft.quality);
@@ -63,9 +64,10 @@ export function JobForm({ onSubmit, pending, error, injectUrl }: Props) {
   const valid = isValidUrl(url);
   const showInvalid = touched && url !== "" && !valid;
   const source = detectSource(url);
+  const blocked = source?.kind === "drm"; // el servidor solo fallaría: ni lo intentamos
 
   async function submit(mode: SubmitMode) {
-    if (!valid || pending) return;
+    if (!valid || blocked || pending) return;
     setSending(mode);
     try {
       await onSubmit(url, quality ? Number(quality) : undefined, mode);
@@ -97,7 +99,7 @@ export function JobForm({ onSubmit, pending, error, injectUrl }: Props) {
           onBlur={() => setTouched(true)}
           placeholder="YouTube, Vimeo, Dailymotion o .m3u8"
           aria-invalid={showInvalid}
-          aria-describedby={showInvalid ? hintId : undefined}
+          aria-describedby={showInvalid ? hintId : blocked ? sourceId : undefined}
           autoComplete="off"
           autoCapitalize="off"
           autoCorrect="off"
@@ -117,7 +119,7 @@ export function JobForm({ onSubmit, pending, error, injectUrl }: Props) {
           </p>
         )}
         {source && (
-          <p className={`chip ${source.kind}`} aria-live="polite" key={source.label}>
+          <p id={sourceId} className={`chip ${source.kind}`} aria-live="polite" key={source.label}>
             {source.label}
           </p>
         )}
@@ -134,11 +136,11 @@ export function JobForm({ onSubmit, pending, error, injectUrl }: Props) {
       </div>
 
       <div className="actions">
-        <button type="submit" className="primary" disabled={!valid || pending}>
+        <button type="submit" className="primary" disabled={!valid || blocked || pending}>
           {sending === "download" && <span className="spinner" aria-hidden="true" />}
           {sending === "download" ? "Enviando…" : "Procesar y descargar"}
         </button>
-        <button type="button" className="ghost" disabled={!valid || pending} onClick={() => void submit("process")}>
+        <button type="button" className="ghost" disabled={!valid || blocked || pending} onClick={() => void submit("process")}>
           {sending === "process" && <span className="spinner" aria-hidden="true" />}
           {sending === "process" ? "Enviando…" : "Solo procesar"}
         </button>

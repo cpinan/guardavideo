@@ -160,6 +160,8 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .chip.hls { color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
 .chip.site { color: var(--accent-2); background: color-mix(in srgb, var(--accent-2) 14%, transparent); }
 .chip.debug { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.chip.login { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.chip.drm { color: var(--err); background: color-mix(in srgb, var(--err) 14%, transparent); }
 .chip.sync { margin-left: auto; }
 
 /* ---------- list ---------- */
@@ -506,3 +508,12 @@ body:has(.player.lightbox) { overflow: hidden; }
   .bar.indeterminate .bar-fill { animation: none !important; width: 100%; opacity: .5; }
 }
 .form + .notice { margin-top: 12px; }
+
+/* ---------- sitios compatibles ---------- */
+.providers { margin-top: 16px; padding: 14px 18px; font-size: 14px; }
+.providers summary { cursor: pointer; font-weight: 650; }
+.providers summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+.providers > p { margin: 10px 0 4px; }
+.providers-group h3 { margin: 12px 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.providers-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.providers-group li { padding: 2px 9px; border-radius: 999px; background: var(--card-2); font-size: 13px; }

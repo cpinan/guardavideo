@@ -13,8 +13,19 @@ describe("isValidUrl", () => {
 describe("detectSource", () => {
   it("distingue HLS directo, sitios web y escenarios de depuración", () => {
     expect(detectSource("https://cdn.example/a/index.m3u8?t=1")).toMatchObject({ kind: "hls" });
-    expect(detectSource("https://www.youtube.com/watch?v=1")).toEqual({ kind: "site", label: "Sitio web · youtube.com" });
+    expect(detectSource("https://www.youtube.com/watch?v=1")).toEqual({ kind: "site", label: "YouTube · compatible" });
+    expect(detectSource("https://videos.example.org/v/1")).toEqual({ kind: "site", label: "Sitio web · videos.example.org" });
     expect(detectSource("http://debug.test/flaky")).toMatchObject({ kind: "debug" });
+  });
+  it("avisa si el sitio requiere cuenta o usa DRM", () => {
+    expect(detectSource("https://www.instagram.com/reel/1")).toEqual({
+      kind: "login",
+      label: "Instagram · requiere iniciar sesión (aún no soportado)",
+    });
+    expect(detectSource("https://www.netflix.com/watch/1")).toEqual({
+      kind: "drm",
+      label: "Netflix · protegido con DRM, no se puede descargar",
+    });
   });
   it("null si la URL no es válida", () => {
     expect(detectSource("nope")).toBeNull();

@@ -32,6 +32,29 @@ Descarga videos desde el navegador con progreso en vivo. API FastAPI + frontend 
 - **Herramientas de depuración**: escenarios simulados y red simulada (ver [Depuración](#depuración)).
 - **Móvil**: diseño adaptable, áreas táctiles de 44–48 px, modo claro/oscuro, respeta `prefers-reduced-motion`.
 
+## Sitios compatibles
+
+Cualquier enlace `.m3u8` directo usa el descargador HLS propio; el resto va a yt-dlp, que reconoce más de
+1.700 sitios. Esta es la lista revisada (la misma que muestra la app en "Sitios compatibles", definida en
+`frontend/src/lib/providers.ts`). Los sitios cambian a menudo: si uno falla, `pip install -U yt-dlp`.
+
+| Categoría | Sitios |
+|---|---|
+| Plataformas de video | YouTube, Vimeo, Dailymotion, Rumble, Odysee, PeerTube, Internet Archive, Streamable, Imgur |
+| Redes sociales | TikTok, X / Twitter, Facebook, Reddit, Tumblr, Pinterest, Bluesky, LinkedIn, 9GAG, Snapchat Spotlight |
+| Directos y gaming | Twitch, Kick, SOOP (AfreecaTV) |
+| Música | SoundCloud, Bandcamp, Mixcloud, Vevo |
+| Charlas y trabajo | TED, Loom, Wistia, Vidyard |
+| Noticias | CNN, BBC, Al Jazeera, CBS News, NBC News, ABC News, Fox News |
+| Televisión pública (Europa y Latinoamérica) | RTVE, ARD Mediathek, ZDF, Arte, Rai, SVT Play, NRK, DR, Globo, Caracol TV, Mediaset / Telecinco |
+| Asia | Bilibili, Niconico, Youku, iQIYI, Weibo, Douyin, Xiaohongshu, Naver TV, Kakao TV, NHK |
+| Rusia y Europa del Este | VK, OK.ru, Rutube |
+
+**Requieren cuenta (aún no soportado):** Instagram, Patreon, Nebula, Floatplane, Dropout, Substack. Sin DRM, pero
+haría falta pasar tus cookies a yt-dlp.
+
+**No compatibles (DRM):** Netflix, Disney+, Prime Video, Max, Hulu, Apple TV+, Spotify, Crunchyroll. El proyecto no evade DRM.
+
 ## Requisitos
 - Python 3.11+
 - Node 20+
