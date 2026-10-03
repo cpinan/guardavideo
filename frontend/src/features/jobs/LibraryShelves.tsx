@@ -1,6 +1,7 @@
-import { memo, useMemo } from "react";
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { thumbnailUrl } from "../../lib/api";
 import { formatClock, formatWhen } from "../../lib/format";
+import { useMediaQuery } from "../../lib/media";
 import { type Playback, savePlayback, useAllPlayback } from "../../lib/playback";
 import type { Job } from "../../lib/schemas";
 import { buildShelves, watchedFraction } from "../../lib/shelves";
@@ -51,6 +52,55 @@ const ShelfCard = memo(function ShelfCard({ job, kind, pb }: { job: Job; kind: K
   );
 });
 
+/**
+ * Fila con desplazamiento horizontal. Con ratón no hay gesto de deslizar: flechas ← → que
+ * avanzan casi una pantalla (el CSS solo las muestra con puntero fino) y se deshabilitan en los extremos.
+ */
+function ShelfRow({ title, labelId, children }: { title: string; labelId: string; children: ReactNode }) {
+  const row = useRef<HTMLUListElement>(null);
+  const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const [edges, setEdges] = useState({ overflow: false, start: true, end: true });
+
+  const measure = useCallback(() => {
+    const el = row.current;
+    if (!el) return;
+    const overflow = el.scrollWidth > el.clientWidth + 1;
+    setEdges({ overflow, start: el.scrollLeft <= 1, end: el.scrollLeft + el.clientWidth >= el.scrollWidth - 1 });
+  }, []);
+
+  useEffect(() => {
+    measure();
+    const el = row.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [measure, children]);
+
+  const page = (dir: 1 | -1) => {
+    const el = row.current;
+    if (el) el.scrollBy({ left: dir * Math.round(el.clientWidth * 0.9), behavior: reduceMotion ? "auto" : "smooth" });
+  };
+
+  return (
+    <>
+      {edges.overflow && (
+        <div className="shelf-nav">
+          <button type="button" className="btn ghost icon-only" aria-label={`Ver anteriores en ${title}`} disabled={edges.start} onClick={() => page(-1)}>
+            <span aria-hidden="true">‹</span>
+          </button>
+          <button type="button" className="btn ghost icon-only" aria-label={`Ver más en ${title}`} disabled={edges.end} onClick={() => page(1)}>
+            <span aria-hidden="true">›</span>
+          </button>
+        </div>
+      )}
+      <ul ref={row} className="shelf-row" aria-labelledby={labelId} onScroll={measure}>
+        {children}
+      </ul>
+    </>
+  );
+}
+
 /** Para no repetir lo mismo: con pocos videos las listas "vistos" y "recientes" no aportan. */
 const MIN_FOR_AUTO_SHELVES = 4;
 
@@ -75,11 +125,11 @@ export function LibraryShelves({ jobs }: { jobs: Job[] }) {
           <h3 id={`shelf-${s.kind}`} className="shelf-heading">
             <span aria-hidden="true">{s.icon}</span> {s.title}
           </h3>
-          <ul className="shelf-row">
+          <ShelfRow title={s.title} labelId={`shelf-${s.kind}`}>
             {s.items.map((job) => (
               <ShelfCard key={job.id} job={job} kind={s.kind} pb={playback[job.id]} />
             ))}
-          </ul>
+          </ShelfRow>
         </section>
       ))}
     </div>

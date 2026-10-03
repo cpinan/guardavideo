@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from "react";
+import { PHONE_QUERY, useMediaQuery } from "../../lib/media";
 import { storage } from "../../lib/storage";
 import { showToast } from "../../lib/toast";
 import { detectSource, isValidUrl } from "./url";
@@ -36,6 +37,8 @@ export function JobForm({ onSubmit, pending, error, injectUrl }: Props) {
   const [quality, setQuality] = useState(draft.quality);
   const [touched, setTouched] = useState(false);
   const [sending, setSending] = useState<SubmitMode | null>(null);
+  const [engaged, setEngaged] = useState(false);
+  const phone = useMediaQuery(PHONE_QUERY);
 
   useEffect(() => {
     if (injectUrl) setUrl(injectUrl.url);
@@ -65,6 +68,8 @@ export function JobForm({ onSubmit, pending, error, injectUrl }: Props) {
   const showInvalid = touched && url !== "" && !valid;
   const source = detectSource(url);
   const blocked = source?.kind === "drm"; // el servidor solo fallaría: ni lo intentamos
+  // Teléfono: vacío y sin foco, solo la fila de la URL; así la biblioteca entra en la primera pantalla.
+  const compact = phone && !engaged && url === "" && !error;
 
   async function submit(mode: SubmitMode) {
     if (!valid || blocked || pending) return;
@@ -83,6 +88,11 @@ export function JobForm({ onSubmit, pending, error, injectUrl }: Props) {
   return (
     <form
       className="card form"
+      onFocus={() => setEngaged(true)}
+      onBlur={(e) => {
+        // relatedTarget dentro del form = moverse entre sus controles: no plegar
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setEngaged(false);
+      }}
       onSubmit={(e) => {
         e.preventDefault(); // Enter = acción principal: procesar y descargar
         void submit("download");
@@ -97,7 +107,7 @@ export function JobForm({ onSubmit, pending, error, injectUrl }: Props) {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           onBlur={() => setTouched(true)}
-          placeholder="YouTube, Vimeo, Dailymotion o .m3u8"
+          placeholder="YouTube, Vimeo, .m3u8…"
           aria-invalid={showInvalid}
           aria-describedby={showInvalid ? hintId : blocked ? sourceId : undefined}
           autoComplete="off"
@@ -125,26 +135,30 @@ export function JobForm({ onSubmit, pending, error, injectUrl }: Props) {
         )}
       </div>
 
-      <div className="field">
-        <label htmlFor={qualityId}>Calidad</label>
-        <select id={qualityId} value={quality} onChange={(e) => setQuality(e.target.value)}>
-          <option value="">Mejor</option>
-          <option value="1080">1080p</option>
-          <option value="720">720p</option>
-          <option value="480">480p</option>
-        </select>
-      </div>
+      {!compact && (
+        <div className="field">
+          <label htmlFor={qualityId}>Calidad</label>
+          <select id={qualityId} value={quality} onChange={(e) => setQuality(e.target.value)}>
+            <option value="">Mejor</option>
+            <option value="1080">1080p</option>
+            <option value="720">720p</option>
+            <option value="480">480p</option>
+          </select>
+        </div>
+      )}
 
-      <div className="actions">
-        <button type="submit" className="primary" disabled={!valid || blocked || pending}>
-          {sending === "download" && <span className="spinner" aria-hidden="true" />}
-          {sending === "download" ? "Enviando…" : "Procesar y descargar"}
-        </button>
-        <button type="button" className="ghost" disabled={!valid || blocked || pending} onClick={() => void submit("process")}>
-          {sending === "process" && <span className="spinner" aria-hidden="true" />}
-          {sending === "process" ? "Enviando…" : "Solo procesar"}
-        </button>
-      </div>
+      {!compact && (
+        <div className="actions">
+          <button type="submit" className="primary" disabled={!valid || blocked || pending}>
+            {sending === "download" && <span className="spinner" aria-hidden="true" />}
+            {sending === "download" ? "Enviando…" : "Procesar y descargar"}
+          </button>
+          <button type="button" className="ghost" disabled={!valid || blocked || pending} onClick={() => void submit("process")}>
+            {sending === "process" && <span className="spinner" aria-hidden="true" />}
+            {sending === "process" ? "Enviando…" : "Solo procesar"}
+          </button>
+        </div>
+      )}
       {error && (
         <p role="alert" className="err full">
           {error}

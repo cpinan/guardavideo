@@ -50,7 +50,8 @@ export function DebugPanel() {
         aria-controls="debug-panel"
         onClick={() => setOpen((o) => !o)}
       >
-        🐞 Depuración{offline ? " · sin red" : ""}
+        <span aria-hidden="true">🐞</span>
+        <span className="debug-label">Depuración{offline ? " · sin red" : ""}</span>
       </button>
 
       {open && (

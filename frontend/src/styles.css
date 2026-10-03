@@ -76,8 +76,8 @@ main {
 @media (min-width: 1024px) {
   main.layout { max-width: 1180px; display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 32px; align-items: start; }
   .side { position: sticky; top: 24px; }
-  .actions { flex-direction: column; }
-  .actions button { flex: 0 0 auto; width: 100%; }
+  .form .actions { flex-direction: column; }
+  .form .actions button { flex: 0 0 auto; width: 100%; }
 }
 h1, h2, h3, p { margin: 0; }
 .muted { color: var(--muted); }
@@ -178,14 +178,16 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .empty path:nth-of-type(1) { fill: color-mix(in srgb, var(--accent) 22%, transparent); stroke: var(--accent); }
 
 /* ---------- job card ---------- */
+/* rise con `backwards`, no `both`: una animación de transform que queda "rellena" convierte la
+   tarjeta en bloque contenedor y el lightbox (position: fixed) quedaría encerrado en ella. */
 .job {
   display: grid; grid-template-columns: 168px 1fr; gap: 16px; padding: 12px;
-  animation: rise .5s var(--ease) both; transition: border-color .4s, box-shadow .4s;
+  animation: rise .5s var(--ease) backwards; transition: border-color .4s, box-shadow .4s;
 }
-.job.done { animation: rise .5s var(--ease) both, glow-ok 1.6s .1s ease-out 1; }
-.job.error { animation: rise .5s var(--ease) both, shake .45s .1s ease-in-out 1; border-color: color-mix(in srgb, var(--err) 55%, var(--line)); }
+.job.done { animation: rise .5s var(--ease) backwards, glow-ok 1.6s .1s ease-out 1; }
+.job.error { animation: rise .5s var(--ease) backwards, shake .45s .1s ease-in-out 1; border-color: color-mix(in srgb, var(--err) 55%, var(--line)); }
 .job.cancelled { opacity: .8; }
-.job.flash { animation: rise .5s var(--ease) both, flash 1.8s ease-in-out 2; }
+.job.flash { animation: rise .5s var(--ease) backwards, flash 1.8s ease-in-out 2; }
 .btn.danger { color: #fff; background: var(--err); border-color: var(--err); }
 .job-body { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
 .job-head { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
@@ -326,7 +328,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
   padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   background: #000d; animation: fade .2s both;
 }
-.player.lightbox .player-frame { width: min(1100px, 100%); }
+.player.lightbox .player-frame { width: min(1100px, 100%); min-width: 0; } /* item de grid: el título largo no debe ensancharlo */
 .player.lightbox .player-bar { color: #fff; }
 .player.lightbox .btn.ghost { color: #fff; border-color: #fff4; }
 .player.lightbox video { max-height: calc(100dvh - 120px); }
@@ -343,12 +345,19 @@ body:has(.player.lightbox) { overflow: hidden; }
 }
 .star svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
 .star.on { color: #f5b301; }
+.job-head .star { position: relative; }
+.star::after { content: ""; position: absolute; inset: -8px; } /* área táctil de 44px+ sin agrandar el icono */
 .star.on svg { fill: currentColor; animation: pop .35s var(--ease) both; }
 @media (hover: hover) { .star:hover { background: var(--card-2); transform: scale(1.1); } }
 .job-head .star { margin-left: auto; }
 .job-head .badge { margin-left: 0; }
 
 .shelves { display: grid; gap: 18px; margin-bottom: 20px; }
+.shelf { min-width: 0; position: relative; }
+/* flechas solo con ratón/trackpad: en táctil se desliza con el dedo */
+.shelf-nav { display: none; position: absolute; top: -6px; right: 0; gap: 6px; }
+.shelf-nav .btn { width: 32px; height: 32px; min-height: 32px; padding: 0; border-radius: 50%; font-size: 20px; line-height: 1; }
+@media (hover: hover) and (pointer: fine) { .shelf-nav { display: flex; } } /* item de grid: sin esto la fila ensancha toda la página */
 .shelf-heading { margin: 0 4px 8px; font-size: 14px; letter-spacing: -.01em; }
 .shelf-row {
   list-style: none; margin: 0; padding: 2px 2px 8px; display: flex; gap: 12px; overflow-x: auto;
@@ -413,6 +422,9 @@ body:has(.player.lightbox) { overflow: hidden; }
   .btn { min-height: 44px; }
   input, select, button { min-height: 48px; font-size: 16px; } /* 16px evita el zoom automático de iOS */
   .check input { min-height: 0; width: 22px; height: 22px; }
+  .filter, .sort select, .search input { min-height: 44px; }
+  .theme-toggle { min-width: 44px; }
+  .btn.icon-only { min-width: 44px; }
 }
 .debug-toggle { right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); }
 .debug-panel { right: max(16px, env(safe-area-inset-right)); bottom: calc(64px + env(safe-area-inset-bottom)); }
@@ -475,16 +487,21 @@ body:has(.player.lightbox) { overflow: hidden; }
   .rail .job .thumb { grid-row: auto; }
   .rail .job-head, .rail .job-host { grid-column: 1; }
   /* tarjeta estrecha: Descargar solo con icono (el texto queda para lectores de pantalla) */
-  .rail .job-meta .btn.ghost:has(.btn-label) { flex: 0 0 44px; padding-inline: 0; }
+  .rail .job-meta .btn.ghost:has(.btn-label) { flex: 0 0 44px; padding-inline: 0; position: relative; }
   .rail .btn-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .job-meta .btn.icon-only { flex: 0 0 44px; }
   .player-bar .btn { flex: 1 1 auto; }
   .player.lightbox .player-frame { width: 100%; }
+  .player.lightbox { background: #000; } /* fondo opaco: el formulario no se transparenta tras los botones */
+  /* botón de depuración: solo el icono, tapa menos contenido */
+  .debug-toggle { width: 48px; height: 48px; padding: 0; border-radius: 50%; justify-content: center; }
+  .debug-toggle .debug-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .toaster { bottom: calc(72px + env(safe-area-inset-bottom)); }
 }
 
 @media (max-width: 360px) {
   .job { grid-template-columns: 84px 1fr; }
+  .rail .job { flex-basis: 84vw; } /* caben Reproducir + descargar + eliminar en una fila */
 }
 
 /* ---------- animations ---------- */
@@ -510,10 +527,11 @@ body:has(.player.lightbox) { overflow: hidden; }
 .form + .notice { margin-top: 12px; }
 
 /* ---------- sitios compatibles ---------- */
-.providers { margin-top: 16px; padding: 14px 18px; font-size: 14px; }
-.providers summary { cursor: pointer; font-weight: 650; }
+.providers { margin-top: 16px; padding: 0 18px; font-size: 14px; }
+.providers[open] { padding-bottom: 14px; }
+.providers summary { cursor: pointer; font-weight: 650; padding-block: 12px; }
 .providers summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
-.providers > p { margin: 10px 0 4px; }
+.providers > p { margin: 0 0 4px; }
 .providers-group h3 { margin: 12px 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .providers-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .providers-group li { padding: 2px 9px; border-radius: 999px; background: var(--card-2); font-size: 13px; }
