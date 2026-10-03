@@ -4,8 +4,8 @@ import logging
 from pathlib import Path
 
 from app.domain import Status
-from app.hashing import url_key
-from app.media import probe_duration
+from app.hashing import file_sha256, url_key
+from app.media import faststart, is_fragmented_mp4, probe_duration
 from app.repositories import JobRepository
 
 logger = logging.getLogger(__name__)
@@ -56,6 +56,26 @@ def recover_jobs(repo: JobRepository, download_dir: Path) -> int:
             and (seconds := probe_duration(job.file_path)) is not None
         ):
             repo.update(job.id, duration_seconds=seconds)
+    _rewrite_fragmented(repo)
     if fixed:
         logger.info("recuperación: %d job(s) corregidos", fixed)
     return fixed
+
+
+def _rewrite_fragmented(repo: JobRepository) -> None:
+    """Videos bajados antes de normalizar el MP4: se reescriben una vez (sin recodificar).
+
+    Un archivo puede ser de varios jobs (dedupe por contenido): se reescribe una sola vez y se
+    actualizan el tamaño y el hash de todos los que lo usan.
+    """
+    by_file: dict[Path, list[str]] = {}
+    for job in repo.list():
+        if job.status == Status.done and job.file_path and job.file_path.suffix == ".mp4":
+            by_file.setdefault(job.file_path, []).append(job.id)
+    for path, ids in by_file.items():
+        if not path.exists() or not is_fragmented_mp4(path) or not faststart(path):
+            continue
+        size, digest = path.stat().st_size, file_sha256(path)
+        for job_id in ids:
+            repo.update(job_id, size_bytes=size, content_hash=digest)
+        logger.info("recuperación: %s reescrito como MP4 normal", path.name)

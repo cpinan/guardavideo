@@ -10,6 +10,7 @@ from typing import Any
 import yt_dlp
 
 from app.downloaders.base import DownloadContext, DownloadResult
+from app.media import faststart, is_fragmented_mp4
 from app.thumbnails import extract_frame, fetch_remote, thumb_path
 
 
@@ -70,6 +71,9 @@ class YtDlpDownloader:
             path = Path(downloads[0]["filepath"])
         else:
             path = next(p for p in dest_dir.glob(f"{job_id}.*") if p.suffix != ".part")
+        if path.suffix == ".mp4" and is_fragmented_mp4(path):
+            ctx.check_cancelled()
+            faststart(path)  # sin esto, reanudar a mitad de video tarda en arrancar
         ctx.report(100)
         if not thumb_path(dest_dir, job_id).exists() and extract_frame(
             path, thumb_path(dest_dir, job_id), (5.0, 1.0, 0.0)
