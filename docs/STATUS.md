@@ -6,7 +6,7 @@ _Last updated: 2026-10-02 · branch `main` · 0 uncommitted files_
 Open `http://192.168.68.104:5173/?debug` on a real phone and check lightbox, Picture-in-Picture and resume-after-reload (the only parts never run in a real mobile browser).
 
 ## State
-- Repo `github.com/cpinan/hls-web` (private), CI green on every push (`make check`).
+- Repo `github.com/cpinan/guardavideo` (private), CI green on every push (`make check`).
 - Backend: HLS + yt-dlp downloads, network retries, thumbnails, ffprobe duration, SQLite history (schema v4), SHA-256 dedupe (URL + content), startup recovery, Range `/stream`, stats, favorites + view counts.
 - Frontend: two download modes (process+download / process only), inline player + lightbox + PiP that resume by second, library shelves/filters/sort/search/day groups, toasts, friendly errors, light/dark/system theme, PWA manifest, mobile layout, debug panel.
 - Verified by hand: real Dailymotion download via yt-dlp; local HLS streams; desktop + 390/320px layouts in headless Chrome.

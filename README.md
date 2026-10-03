@@ -2,7 +2,7 @@
 
 Descarga videos desde el navegador con progreso en vivo. API FastAPI + frontend React/TypeScript.
 
-**Repositorio (privado):** <https://github.com/cpinan/hls-web>
+**Repositorio (privado):** <https://github.com/cpinan/guardavideo>
 **Uso local:** tras arrancar (ver [Cómo usarlo](#cómo-usarlo)) abre <http://localhost:5173>
 · API y documentación interactiva: <http://localhost:8000/docs>
 
@@ -39,7 +39,7 @@ Descarga videos desde el navegador con progreso en vivo. API FastAPI + frontend 
 
 ## Cómo usarlo
 ```bash
-git clone git@github.com:cpinan/hls-web.git && cd hls-web
+git clone git@github.com:cpinan/guardavideo.git && cd guardavideo
 
 python3 -m venv backend/.venv && source backend/.venv/bin/activate
 make install          # dependencias de backend y frontend
