@@ -275,10 +275,24 @@ internal fun httpMessage(code: Int): String = when (code) {
     else -> "El origen respondió con un error ($code)"
 }
 
-/** Last path segment without its extension, URL-decoded: "Mi%20video.mp4" → "Mi video". */
-internal fun titleFrom(url: String): String? =
-    url.substringBefore('?').substringBefore('#').trimEnd('/').substringAfterLast('/')
-        .substringBeforeLast('.').decodeURLPart().takeIf { it.isNotBlank() }
+/**
+ * A readable title from the URL: the file name ("Mi%20video.mp4" → "Mi video"). HLS playlists are
+ * usually called master/index/playlist, which says nothing: then the folder name, then the host.
+ */
+internal fun titleFrom(url: String): String? {
+    val afterScheme = url.substringBefore('?').substringBefore('#').substringAfter("://")
+    val host = afterScheme.substringBefore('/')
+    val segments = afterScheme.removePrefix(host).split('/').filter { it.isNotBlank() }.map { it.decodeURLPart() }
+    val name = segments.lastOrNull()?.substringBeforeLast('.')
+    return when {
+        name != null && name.lowercase() !in GENERIC_NAMES -> name
+        segments.size >= 2 && segments[segments.size - 2].lowercase() !in GENERIC_FOLDERS -> segments[segments.size - 2]
+        else -> host.takeIf { it.isNotBlank() }
+    }
+}
+
+private val GENERIC_NAMES = setOf("master", "index", "playlist", "prog_index", "media", "chunklist", "manifest", "main", "stream", "video")
+private val GENERIC_FOLDERS = setOf("hls", "video", "videos", "media", "stream", "streams", "vod")
 
 /** Each AES key is fetched once, even when several segments ask for it at the same time. */
 private class KeyCache(private val fetch: suspend (String) -> ByteArray) {

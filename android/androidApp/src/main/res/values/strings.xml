@@ -1,4 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Guardavideo</string>
+
+    <string name="url_label">URL del video</string>
+    <string name="url_placeholder">Enlace .m3u8 o .mp4</string>
+    <string name="paste">Pegar</string>
+    <string name="quality_label">Calidad</string>
+    <string name="quality_best">Mejor</string>
+    <string name="download">Descargar</string>
+    <string name="clipboard_empty">El portapapeles no tiene un enlace http(s)</string>
+
+    <string name="queued">Creado</string>
+    <string name="already_downloading">Ese video ya se está descargando</string>
+    <string name="already_downloaded">Ya tenías este video</string>
+    <string name="download_started">Descarga en cola</string>
+
+    <string name="empty_title">Aún no hay videos</string>
+    <string name="empty_body">Pega un enlace directo a un video (.m3u8 o .mp4), o compártelo desde el navegador con «Compartir → Guardavideo».</string>
+
+    <string name="status_queued">En cola</string>
+    <string name="status_running">Descargando</string>
+    <string name="status_error">Error</string>
+    <string name="status_cancelled">Cancelado</string>
+    <string name="reconnecting">Reconectando… intento %1$d</string>
+    <string name="percent">%1$d %%</string>
+    <string name="watched">Visto</string>
+    <string name="resume_at">Visto %1$s</string>
+
+    <string name="cancel">Cancelar</string>
+    <string name="retry">Reintentar</string>
+    <string name="delete">Eliminar</string>
+    <string name="play">Reproducir</string>
+    <string name="star">Marcar como favorito</string>
+    <string name="unstar">Quitar de favoritos</string>
+    <string name="delete_title">¿Eliminar este video?</string>
+    <string name="delete_body">Se borra el archivo del teléfono. No se puede deshacer.</string>
+    <string name="keep">Conservar</string>
+    <string name="back">Volver</string>
+    <string name="player_missing">El archivo ya no está en el teléfono</string>
 </resources>

@@ -1,4 +1,4 @@
-.PHONY: install dev-api dev-api-debug dev-web share serve tailscale-serve ui-audit lint typecheck test test-fast check fmt clean
+.PHONY: install dev-api dev-api-debug dev-web share serve tailscale-serve ui-audit android-check android-install lint typecheck test test-fast check fmt clean
 
 install:  ## Instala dependencias de backend y frontend
 	cd backend && pip install -e ".[dev]"
@@ -45,6 +45,12 @@ serve:  ## Producción local para compartir: frontend compilado + API en 127.0.0
 tailscale-serve:  ## HTTPS solo dentro de tu tailnet hacia :8080 (Tailscale con sesión iniciada y HTTPS activado)
 	tailscale serve --bg 8080
 	tailscale serve status
+
+android-check:  ## App Android: tests del módulo compartido (KMP) + tests de la app + APK debug
+	cd android && ./gradlew --console=plain -q :shared:testAndroidHostTest :androidApp:testDebugUnitTest :androidApp:assembleDebug
+
+android-install:  ## Compila e instala la app Android en el emulador/dispositivo ($$ANDROID_SERIAL)
+	android/tools/dev.sh install
 
 ui-audit:  ## Capturas + revisión de desborde/objetivos táctiles en Chrome headless (requiere dev-api y dev-web)
 	node tools/ui-audit.mjs http://localhost:5173/ ui-audit-out

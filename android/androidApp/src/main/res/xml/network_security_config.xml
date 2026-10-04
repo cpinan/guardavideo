@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Personal tool: the user pastes the links, and some direct media links (a LAN server, older
+  CDNs) are plain http. Cleartext is allowed so those work; https is still used whenever the
+  link says so.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

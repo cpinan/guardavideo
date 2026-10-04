@@ -12,6 +12,17 @@ API FastAPI + frontend React/TS para descargar videos con progreso en vivo (SSE)
 - Un solo test: `cd backend && pytest tests/test_jobs_api.py::test_cancel_running_job -q` · `cd frontend && npx vitest run src/features/jobs/JobRow.test.tsx`
 - Requiere `ffmpeg` en el PATH. Para probar con streams en localhost: `HLSWEB_ALLOW_PRIVATE_URLS=true` (solo dev).
 
+## App Android (`android/`)
+Proyecto Gradle propio (AGP 9.3.1, Kotlin 2.4.10). Descarga **en el teléfono**, sin servidor: solo enlaces
+directos (.m3u8 / .mp4); los enlaces de páginas (YouTube…) necesitan yt-dlp y no funcionan ahí.
+- `:shared` (KMP Android + iOS): `source/` detección de enlaces, `hls/` parser, `download/MediaDownloader`
+  (Ktor + Okio), `library/` Room KMP + `JobRepository` + `DownloadRunner`. Tests en `commonTest` (MockEngine +
+  FakeFileSystem): `./gradlew :shared:testAndroidHostTest` (sin `withHostTest {}` no corren).
+- `:androidApp`: Compose M3, Hilt, WorkManager (worker foreground dataSync), Media3, Coil (miniatura del video).
+- `make android-check` · `make android-install` · `android/tools/dev.sh` (share/tap/shot/ui/files en el emulador).
+- **ViewModels nunca reciben `Context`**: lo que lo necesita (ExoPlayer, WorkManager) se crea en un módulo Hilt
+  y el VM recibe una interfaz (`Player`, `DownloadQueue`). Textos de UI en `strings.xml`.
+
 ## Arquitectura (dependencias hacia adentro)
 ```
 backend/app/
