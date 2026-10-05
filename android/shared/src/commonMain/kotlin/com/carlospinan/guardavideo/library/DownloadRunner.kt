@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okio.FileSystem
@@ -97,6 +98,8 @@ class DownloadRunner(
 
         val percentFlow = MutableStateFlow(0)
         val retries = MutableStateFlow(0)
+        // Title and preview arrive early (from the site's metadata), before the video itself.
+        val meta = MutableStateFlow<Pair<String?, String?>>(null to null)
         val listener = object : DownloadListener {
             override fun progress(percent: Float) {
                 if (percent >= 0) percentFlow.value = percent.toInt()
@@ -104,6 +107,14 @@ class DownloadRunner(
 
             override fun retrying(attempt: Int) {
                 retries.value = attempt
+            }
+
+            override fun title(title: String) {
+                meta.value = title to meta.value.second
+            }
+
+            override fun thumbnail(path: Path) {
+                meta.value = meta.value.first to path.toString()
             }
         }
         return try {
@@ -114,8 +125,16 @@ class DownloadRunner(
                         repo.update(id) { it.copy(percent = p.toFloat(), retries = r) }?.let(onUpdate)
                     }
                 }
+                val metaWriter = launch {
+                    // filter, not drop(1): metadata that arrived before this collector started must not be lost
+                    meta.filter { (t, p) -> t != null || p != null }.collect { (title, thumb) ->
+                        repo.update(id) {
+                            it.copy(title = it.title ?: title?.take(200), thumbnailPath = thumb ?: it.thumbnailPath)
+                        }?.let(onUpdate)
+                    }
+                }
                 downloader.download(detectSource(job.url), id, downloadsDir, job.quality, listener)
-                    .also { writer.cancel() }
+                    .also { writer.cancel(); metaWriter.cancel() }
             }
             val file = try {
                 postProcessor.process(result)

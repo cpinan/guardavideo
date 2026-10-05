@@ -144,11 +144,20 @@ class LibraryViewModelTest {
         vm.onQuery("PAN")
         // The state is built off the main thread: wait for it rather than reading it at once.
         val state = vm.state.first { it.searching && it.total == 2 }
-        assertEquals(listOf("receta-de-pan.mp4"), state.flat.map { it.displayTitle })
+        assertEquals(listOf("receta-de-pan"), state.flat.map { it.displayTitle })
         assertTrue(state.groups.isEmpty())
         vm.closeSearch()
         assertTrue(!vm.searchOpen)
         assertTrue(!vm.state.first { !it.searching }.searching)
+    }
+
+    @Test
+    fun openingTheLibraryReEnqueuesJobsThatClaimToBeRunning() = runTest {
+        val stuck = (repo.create("https://x.org/stuck.mp4", null) as com.carlospinan.guardavideo.library.CreateResult.Created).job
+        repo.update(stuck.id) { it.copy(status = com.carlospinan.guardavideo.library.JobStatus.Running) }
+        queue.enqueued.clear()
+        LibraryViewModel(repo, queue, exporter, LinkPolicy(sitePages = true), storage = object : StorageInfo { override fun freeBytes() = 5L }, now = { NOW })
+        assertEquals(listOf(stuck.id), queue.enqueued)
     }
 
     private companion object {

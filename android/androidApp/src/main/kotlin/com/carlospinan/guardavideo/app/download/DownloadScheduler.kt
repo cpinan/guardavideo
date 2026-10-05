@@ -5,6 +5,7 @@ import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,6 +28,9 @@ class DownloadScheduler @Inject constructor(@ApplicationContext private val cont
         val request = OneTimeWorkRequestBuilder<DownloadWorker>()
             .setInputData(workDataOf(DownloadWorker.KEY_JOB_ID to jobId))
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            // Expedited work may become a foreground service even when started in the background
+            // (restart after process death, reboot): plain work gets ForegroundServiceStartNotAllowed.
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .addTag(TAG)
             .build()
         // KEEP: tapping "download" twice or re-enqueueing on startup never runs the job twice.

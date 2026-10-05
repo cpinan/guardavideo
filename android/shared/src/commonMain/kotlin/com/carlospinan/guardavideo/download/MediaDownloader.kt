@@ -50,6 +50,12 @@ interface DownloadListener {
 
     /** A recoverable network failure; `attempt = 0` means it recovered. */
     fun retrying(attempt: Int) {}
+
+    /** The real title, as soon as the source tells (before the media is downloaded). */
+    fun title(title: String) {}
+
+    /** A preview image saved to [path] (the site's thumbnail), shown while downloading. */
+    fun thumbnail(path: Path) {}
 }
 
 /** Where one HLS segment landed inside the concatenated .ts file. */
@@ -109,6 +115,8 @@ class MediaDownloader(
         listener: DownloadListener,
     ): DownloadResult = withContext(io) {
         val part = destDir / "$id.part"
+        // A readable name right away (folder or file name), not "master.m3u8".
+        titleFrom(sourceUrl(source))?.let(listener::title)
         try {
             when (source) {
                 is LinkSource.Hls -> downloadHls(source.url, id, destDir, part, quality, listener)
@@ -297,7 +305,13 @@ internal fun httpMessage(code: Int): String = when (code) {
  * A readable title from the URL: the file name ("Mi%20video.mp4" → "Mi video"). HLS playlists are
  * usually called master/index/playlist, which says nothing: then the folder name, then the host.
  */
-internal fun titleFrom(url: String): String? {
+private fun sourceUrl(source: LinkSource): String = when (source) {
+    is LinkSource.Hls -> source.url
+    is LinkSource.DirectFile -> source.url
+    else -> ""
+}
+
+fun titleFrom(url: String): String? {
     val afterScheme = url.substringBefore('?').substringBefore('#').substringAfter("://")
     val host = afterScheme.substringBefore('/')
     val segments = afterScheme.removePrefix(host).split('/').filter { it.isNotBlank() }.map { it.decodeURLPart() }

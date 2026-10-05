@@ -107,6 +107,7 @@ class JobRepository(
         val path = job.filePath
         val shared = path != null && dao.all().any { it.id != id && it.filePath == path }
         if (path != null && !shared) deleteWithCompanions(path.toPath())
+        job.thumbnailPath?.let { fs.delete(it.toPath(), mustExist = false) }
         dao.delete(id)
         true
     }

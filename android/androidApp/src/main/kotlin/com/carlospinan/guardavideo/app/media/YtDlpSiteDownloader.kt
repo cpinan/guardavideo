@@ -14,6 +14,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
+import org.json.JSONObject
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -81,7 +83,15 @@ class YtDlpSiteDownloader @Inject constructor(
             // that --print would otherwise silence.
             addOption("--print", "after_move:%(title)s")
             addOption("--progress")
+            // Written before the video itself: the card shows the real title and the site's
+            // thumbnail while downloading (watched below), instead of the video id.
+            addOption("--write-thumbnail")
+            addOption("--convert-thumbnails", "jpg")
+            addOption("-o", "thumbnail:$destDir/${id}_thumb.%(ext)s")
+            addOption("--write-info-json")
+            addOption("-o", "infojson:$destDir/${id}_meta")
         }
+        val infoJson = destDir / "${id}_meta.info.json"
 
         val response = withContext(Dispatchers.IO) {
             coroutineScope {
@@ -94,6 +104,7 @@ class YtDlpSiteDownloader @Inject constructor(
                         if (!finished.get()) YoutubeDL.getInstance().destroyProcessById(id)
                     }
                 }
+                val watcher = launch { reportMetadata(destDir, id, infoJson, listener) }
                 try {
                     YoutubeDL.getInstance().execute(request, id) { progress, _, _ ->
                         if (progress >= 0) listener.progress(progress)
@@ -105,17 +116,48 @@ class YtDlpSiteDownloader @Inject constructor(
                 } finally {
                     finished.set(true)
                     killer.cancel()
+                    watcher.cancel()
                 }
             }
         }
 
+        thumbnailIn(destDir, id)?.let(listener::thumbnail) // in case it landed after the last poll
+        fs.delete(infoJson, mustExist = false)
+        // Only video files: the thumbnail (<id>.jpg) and metadata also start with the id.
         val file = fs.list(destDir).firstOrNull { path ->
             val name = path.name
-            name.startsWith("$id.") && !name.endsWith(".part") && !name.endsWith(".ytdl") && ".temp." !in name
+            name.startsWith("$id.") && name.substringAfterLast('.').lowercase() in VIDEO_EXTENSIONS && ".temp." !in name
         } ?: throw DownloadException("yt-dlp terminó pero no dejó ningún archivo")
         val title = response.out.lines().map { it.trim() }.lastOrNull { it.isNotEmpty() && !it.startsWith("[") }
         listener.progress(100f)
         return DownloadResult(file, title, fs.metadata(file).size ?: 0)
+    }
+
+    /** Polls for yt-dlp's thumbnail and info JSON and reports each once. */
+    private suspend fun reportMetadata(dir: Path, id: String, infoJson: Path, listener: DownloadListener) {
+        var title = false
+        var thumb = false
+        while (!(title && thumb)) {
+            if (!thumb) thumbnailIn(dir, id)?.let { listener.thumbnail(it); thumb = true }
+            if (!title && fs.exists(infoJson)) {
+                // May still be half-written: a parse error just means "try again next tick".
+                runCatching { JSONObject(fs.read(infoJson) { readUtf8() }).optString("title") }.getOrNull()
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { listener.title(it); title = true }
+            }
+            delay(300)
+        }
+    }
+
+    /**
+     * The converted JPEG (yt-dlp first saves the original format, then converts it). Depending on
+     * the yt-dlp version it lands as <id>_thumb.jpg (our template) or next to the video as <id>.jpg.
+     */
+    private fun thumbnailIn(dir: Path, id: String): Path? =
+        listOf(dir / "${id}_thumb.jpg", dir / "$id.jpg").firstOrNull { fs.exists(it) && (fs.metadata(it).size ?: 0) > 0 }
+
+    private companion object {
+        val VIDEO_EXTENSIONS = setOf("mp4", "m4v", "mkv", "webm", "mov", "ts", "flv", "3gp")
     }
 
     /** Last "ERROR:" line from yt-dlp, without its prefix: what actually went wrong. */

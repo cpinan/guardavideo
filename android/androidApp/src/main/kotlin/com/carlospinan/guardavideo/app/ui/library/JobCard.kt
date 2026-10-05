@@ -46,6 +46,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -91,17 +93,15 @@ fun PendingCard(job: Job, onCancel: () -> Unit, onRetry: () -> Unit, onDelete: (
                     else -> null
                 }
                 val label = "${job.displayTitle}: $pct %"
-                if (queued || job.percent <= 0f) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth().height(8.dp).clip(CircleShape).semantics { contentDescription = label }, color = brand.accent, trackColor = brand.card2)
-                } else {
-                    LinearProgressIndicator(
-                        progress = { job.percent / 100f },
-                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape).semantics { contentDescription = label },
-                        color = if (job.retries > 0) brand.warn else brand.accent,
-                        trackColor = brand.card2,
-                        drawStopIndicator = {},
-                    )
-                }
+                ShimmerProgressBar(
+                    percent = job.percent,
+                    indeterminate = queued || job.percent <= 0f,
+                    retrying = job.retries > 0,
+                    modifier = Modifier.fillMaxWidth().semantics {
+                        contentDescription = label
+                        progressBarRangeInfo = ProgressBarRangeInfo(job.percent / 100f, 0f..1f)
+                    },
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (!queued) Text("$pct%", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = brand.text, modifier = Modifier.padding(end = 8.dp))
                     Text(note.orEmpty(), fontSize = 13.sp, color = if (job.retries > 0) brand.warn else brand.muted, modifier = Modifier.weight(1f))

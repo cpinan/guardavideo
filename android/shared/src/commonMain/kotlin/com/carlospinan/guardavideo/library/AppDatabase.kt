@@ -15,11 +15,12 @@ import kotlinx.coroutines.IO
  */
 @Database(
     entities = [JobEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
     // v2: view_count, last_viewed_at, position_updated_at (new nullable / defaulted columns).
     // v3: playback_speed.
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
+    // v4: thumbnail_path.
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)],
 )
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {

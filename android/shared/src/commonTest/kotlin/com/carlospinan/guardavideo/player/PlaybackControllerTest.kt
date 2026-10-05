@@ -73,7 +73,7 @@ class PlaybackControllerTest {
         val id = video(file = "/v/v1.m3u8", position = 42_000)
         val controller = PlaybackController(player, repo, this, fileExists = { true })
         controller.open(id)
-        assertEquals(PlayableMedia("/v/v1.m3u8", PlayableMedia.Kind.LocalHls, "a.mp4") to 42_000L, player.loaded)
+        assertEquals(PlayableMedia("/v/v1.m3u8", PlayableMedia.Kind.LocalHls, "a") to 42_000L, player.loaded)
         controller.close()
     }
 

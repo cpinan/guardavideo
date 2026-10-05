@@ -76,6 +76,15 @@ class JobRepositoryTest {
     }
 
     @Test
+    fun deleteAlsoRemovesTheThumbnail() = runTest {
+        val video = done("https://x.org/a.mp4", "/v/a.mp4")
+        fs.write("/v/a_thumb.jpg".toPath()) { writeUtf8("jpg") }
+        repo.update(video.id) { it.copy(thumbnailPath = "/v/a_thumb.jpg") }
+        repo.delete(video.id)
+        assertFalse(fs.exists("/v/a_thumb.jpg".toPath()))
+    }
+
+    @Test
     fun activeJobsCannotBeDeletedAndOnlyFailuresRetry() = runTest {
         val job = assertIs<CreateResult.Created>(repo.create("https://x.org/a.mp4", null)).job
         assertFalse(repo.delete(job.id))

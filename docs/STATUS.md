@@ -3,7 +3,7 @@
 _Last updated: 2026-10-04 · branch `main` · 0 uncommitted files_
 
 ## Next action
-User tests v0.4.0 on the Pixel (2026-10-05): Google Cast to a real Chromecast (never tested: no device here), per-video speed, header search, share link, fragmented-MP4 repair.
+User tests v0.5.0 on the Pixel (2026-10-05): download a Dailymotion video and check the in-progress card (real title + site thumbnail early, shimmer), Google Cast with a real Chromecast (untested here), per-video speed, search.
 
 ## State
 - Web + API (Mac): HLS + yt-dlp downloads, SQLite library, shelves, mobile UI, `make serve` (production on 127.0.0.1:8080, debug off) + `make tailscale-serve` for private sharing. Repo `github.com/cpinan/guardavideo` (private); CI runs `check` (web) and `android` jobs, both green.
@@ -31,6 +31,8 @@ Device: `android/tools/dev.sh install|share URL|shot|ui|tap|files` (set `ANDROID
 ## Do not redo
 - ViewModels never receive `Context` (user rule): build context-needing objects in Hilt modules (`PlayerModule` gives `Player`), inject interfaces (`DownloadQueue`, `VideoExporter`).
 - Cast: the Chromecast fetches the file from `LanMediaServer` on the phone's Wi-Fi IP (token URL, ranges); `SwitchingVideoPlayer` moves position/speed between ExoPlayer and CastPlayer. Needs Play services; untested with a real receiver.
+- Work that Android restarts in the background (process death, reboot) cannot start a plain foreground service on Android 12+: downloads are expedited, setForeground is best effort, and opening the library re-enqueues jobs stuck in Running (KEEP, idempotent).
+- yt-dlp writes the thumbnail and `--write-info-json` before the video: the site downloader polls for them to show the title/thumbnail early. The final-file finder only accepts video extensions (`<id>.jpg` also starts with the id).
 - Release builds are signed with the local debug key on purpose (personal sideload): a different key would force uninstalling and lose the phone's library. youtubedl-android ships no R8 rules: `proguard-rules.pro` keeps `com.yausername.**`, Jackson and commons-compress.
 - Some Dailymotion videos arrive as fragmented MP4 (length reads as the first fragment, e.g. 7:30 for 1:13:00; blank thumbnail). Media3 Transformer cannot rewrite them ("Unexpected duration change"): `FfmpegFaststart` runs youtubedl-android's bundled ffmpeg (`nativeLibraryDir/libffmpeg.so`, needs `-f mp4` for the temp name). Existing files are repaired at startup.
 - Dailymotion's CDN returns 403 (E005) to plain HTTP clients, even with honest browser headers; only yt-dlp's own workaround gets through. Use embedded yt-dlp, not a hand-written Kotlin extractor.

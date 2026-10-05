@@ -7,6 +7,7 @@ import android.os.Build
 import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
+import android.util.Log
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.carlospinan.guardavideo.library.DownloadRunner
@@ -31,7 +32,13 @@ class DownloadWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val id = inputData.getString(KEY_JOB_ID) ?: return Result.failure()
         val job = repository.get(id) ?: return Result.success() // deleted meanwhile
-        setForeground(foregroundInfo(job))
+        try {
+            setForeground(foregroundInfo(job))
+        } catch (e: Exception) {
+            // Android 12+ can refuse a foreground service when the work starts in the background.
+            // Better a silent download than none: carry on without the notification.
+            Log.w("DownloadWorker", "No foreground service for $id: ${e.javaClass.simpleName}")
+        }
 
         var lastShown = -1
         val status = runner.run(id) { updated ->

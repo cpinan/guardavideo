@@ -52,8 +52,10 @@ class MediaDownloaderTest {
     private class Recorder : DownloadListener {
         val progress = mutableListOf<Float>()
         val retries = mutableListOf<Int>()
+        val titles = mutableListOf<String>()
         override fun progress(percent: Float) { progress += percent }
         override fun retrying(attempt: Int) { retries += attempt }
+        override fun title(title: String) { titles += title }
     }
 
     @Test
@@ -99,6 +101,7 @@ class MediaDownloaderTest {
         assertContentEquals(byteArrayOf(0, 0, 1, 1, 2, 2, 3, 3, 4, 4), fs.read(result.path) { readByteArray() })
         assertTrue(requests.none { it.endsWith("low.m3u8") })
         assertEquals(listOf(20f, 40f, 60f, 80f, 100f), rec.progress)
+        assertEquals(listOf("v"), rec.titles) // reported before any segment: folder name, not "master"
         assertEquals((0..4).map { SegmentSpan(2.0, it * 2L, 2) }, result.segments)
     }
 

@@ -30,6 +30,7 @@ object Notifications {
 
     fun progress(context: Context, job: Job) = NotificationCompat.Builder(context, CHANNEL_PROGRESS)
         .setSmallIcon(R.drawable.ic_stat_download)
+        .setLargeIcon(thumbnail(job))
         .setContentTitle(job.displayTitle)
         .setContentText(if (job.retries > 0) "Reconectando… intento ${job.retries}" else "${job.percent.toInt()} %")
         .setProgress(100, job.percent.toInt(), job.percent <= 0f)
@@ -46,6 +47,19 @@ object Notifications {
         .setAutoCancel(true)
         .setContentIntent(openApp(context))
         .build()
+
+    /** The site's thumbnail as the notification's picture; decoded once per file, small. */
+    private val thumbnails = android.util.LruCache<String, android.graphics.Bitmap>(4)
+
+    private fun thumbnail(job: Job): android.graphics.Bitmap? {
+        val path = job.thumbnailPath ?: return null
+        thumbnails.get(path)?.let { return it }
+        val bitmap = runCatching {
+            android.graphics.BitmapFactory.decodeFile(path, android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 })
+        }.getOrNull() ?: return null
+        thumbnails.put(path, bitmap)
+        return bitmap
+    }
 
     private fun openApp(context: Context): PendingIntent = PendingIntent.getActivity(
         context,

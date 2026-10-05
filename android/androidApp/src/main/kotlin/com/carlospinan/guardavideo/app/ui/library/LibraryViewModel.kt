@@ -121,6 +121,13 @@ class LibraryViewModel @Inject constructor(
     private val _messages = Channel<UiMessage>(Channel.BUFFERED)
     val messages: Flow<UiMessage> = _messages.receiveAsFlow()
 
+    init {
+        // Self-healing: a job whose worker died (process killed, refused foreground service…)
+        // still says "running". Re-enqueueing is idempotent (unique work, KEEP), so opening the
+        // library always gets stuck downloads moving again.
+        viewModelScope.launch { repository.active().forEach { queue.enqueue(it.id) } }
+    }
+
     fun onUrlChange(value: String) {
         url = value
     }

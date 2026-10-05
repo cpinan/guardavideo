@@ -1,5 +1,7 @@
 package com.carlospinan.guardavideo.library
 
+import com.carlospinan.guardavideo.download.titleFrom
+
 enum class JobStatus {
     Queued, Running, Done, Error, Cancelled;
 
@@ -30,8 +32,10 @@ data class Job(
     val positionUpdatedAt: Long? = null,
     /** Last playback speed chosen for this video (1.0 = normal). */
     val playbackSpeed: Float = 1f,
+    /** The site's own thumbnail (JPEG), known before the video finishes downloading. */
+    val thumbnailPath: String? = null,
 ) {
     /** What the UI shows: the title, or the last part of the URL while it is unknown. */
     val displayTitle: String
-        get() = title ?: url.substringBefore('?').trimEnd('/').substringAfterLast('/').ifBlank { url }
+        get() = title ?: titleFrom(url) ?: url
 }

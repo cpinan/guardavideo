@@ -33,6 +33,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -141,23 +150,34 @@ fun Thumb(job: Job, modifier: Modifier = Modifier, showCheck: Boolean = false, o
             .clip(RoundedCornerShape(12.dp))
             .background(Brush.linearGradient(listOf(brand.card2, brand.accent.copy(alpha = 0.18f)))),
     ) {
-        if (job.status == JobStatus.Done && job.filePath != null) {
-            // Keyed on size and length too: when a file is repaired or replaced in place (same
-            // path), the thumbnail is fetched again instead of keeping the failed/old frame.
-            key(job.filePath, job.sizeBytes, job.durationMs) {
-            AsyncImage(
-                model = ImageRequest.Builder(context)
-                    .data(File(job.filePath!!))
-                    .decoderFactory(VideoFrameDecoder.Factory())
-                    .videoFrameMillis(thumbnailFrameMs(job.durationMs))
-                    .build(),
+        val siteThumb = job.thumbnailPath?.let(::File)?.takeIf { it.exists() }
+        when {
+            // The site's thumbnail: available early, and usually better than a random frame.
+            siteThumb != null -> AsyncImage(
+                model = siteThumb,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
-            }
+            job.status == JobStatus.Done && job.filePath != null ->
+                // Keyed on size and length too: when a file is repaired or replaced in place (same
+                // path), the frame is fetched again instead of keeping the failed/old one.
+                key(job.filePath, job.sizeBytes, job.durationMs) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(File(job.filePath!!))
+                            .decoderFactory(VideoFrameDecoder.Factory())
+                            .videoFrameMillis(thumbnailFrameMs(job.durationMs))
+                            .build(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
         }
         if (job.status.isActive) {
+            // Downloading: dim the preview, sweep a shimmer over it, ring with the percent on top.
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (siteThumb != null) 0.35f else 0f)).shimmer())
             ProgressRing(job.percent, indeterminate = job.status == JobStatus.Queued || job.percent <= 0f, modifier = Modifier.align(Alignment.Center))
         }
         job.durationMs?.let { duration ->
@@ -189,6 +209,57 @@ fun Thumb(job: Job, modifier: Modifier = Modifier, showCheck: Boolean = false, o
             )
         }
         overlay()
+    }
+}
+
+/**
+ * A light band sweeping across, like the web's progress shimmer. Static when the system has
+ * animations turned off (the infinite transition then stops).
+ */
+fun Modifier.shimmer(color: Color = Color.White.copy(alpha = 0.28f)): Modifier = composed {
+    val transition = rememberInfiniteTransition(label = "shimmer")
+    val x by transition.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(tween(durationMillis = 1_400, easing = LinearEasing)),
+        label = "shimmer-x",
+    )
+    drawWithContent {
+        drawContent()
+        val w = size.width
+        drawRect(
+            Brush.linearGradient(
+                colors = listOf(Color.Transparent, color, Color.Transparent),
+                start = Offset(w * x - w * 0.6f, 0f),
+                end = Offset(w * x, size.height),
+            ),
+        )
+    }
+}
+
+/**
+ * Progress bar like the web's: accent gradient fill with a shimmer while running, a sliding band
+ * while the size is unknown (queued / no percent yet), amber while reconnecting.
+ */
+@Composable
+fun ShimmerProgressBar(percent: Float, indeterminate: Boolean, retrying: Boolean, modifier: Modifier = Modifier) {
+    val brand = LocalBrand.current
+    val fill = if (retrying) Brush.linearGradient(listOf(brand.warn, brand.warn.copy(alpha = 0.7f))) else brand.accentGradient
+    Box(modifier.height(10.dp).clip(CircleShape).background(brand.card2)) {
+        if (indeterminate) {
+            val transition = rememberInfiniteTransition(label = "indeterminate")
+            val x by transition.animateFloat(-0.4f, 1f, infiniteRepeatable(tween(1_400, easing = LinearEasing)), label = "slide")
+            Box(
+                Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(0.4f)
+                    .graphicsLayer { translationX = size.width / 0.4f * x }
+                    .background(fill),
+            )
+        } else {
+            val animated by animateFloatAsState(percent.coerceIn(0f, 100f) / 100f, tween(600), label = "progress")
+            Box(Modifier.fillMaxHeight().fillMaxWidth(animated).clip(CircleShape).background(fill).shimmer())
+        }
     }
 }
 

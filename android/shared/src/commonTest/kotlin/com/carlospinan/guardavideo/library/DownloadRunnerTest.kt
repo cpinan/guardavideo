@@ -16,6 +16,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class DownloadRunnerTest {
     private val fs = FakeFileSystem()
@@ -56,6 +57,25 @@ class DownloadRunnerTest {
         assertEquals("My clip", stored.title)
         assertEquals(3L, stored.sizeBytes)
         assertEquals(listOf(0f, 10f, 55f, 100f), seen) // Running(0), whole percents, Done
+    }
+
+    @Test
+    fun titleAndPreviewAppearWhileStillDownloading() = runTest {
+        val job = queued()
+        val seen = mutableListOf<Pair<String?, String?>>()
+        runner { _, id, destDir, listener ->
+            listener.title("Atrás la heredera")
+            listener.thumbnail(destDir / "${id}_thumb.jpg")
+            delay(100)
+            val file = destDir / "$id.mp4"
+            fs.write(file) { writeUtf8("v") }
+            DownloadResult(file, "título final", 1)
+        }.run(job.id) { if (it.status == JobStatus.Running) seen += it.title to it.thumbnailPath }
+
+        assertTrue(seen.any { it == "Atrás la heredera" to "/downloads/j1_thumb.jpg" })
+        val done = repo.get(job.id)!!
+        assertEquals("Atrás la heredera", done.title) // the early title wins over the file name
+        assertEquals("/downloads/j1_thumb.jpg", done.thumbnailPath)
     }
 
     @Test
