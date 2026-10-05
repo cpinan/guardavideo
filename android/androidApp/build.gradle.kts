@@ -15,8 +15,8 @@ android {
         applicationId = "com.carlospinan.guardavideo"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
         // yt-dlp ships a Python runtime per ABI: arm64 covers current phones and Apple-silicon emulators.
         ndk { abiFilters += "arm64-v8a" }
     }
@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
     implementation(libs.media3.transformer)
+    implementation(libs.media3.cast)
     implementation(libs.coil.compose)
     implementation(libs.coil.video)
     implementation(libs.youtubedl.android)

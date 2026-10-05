@@ -20,6 +20,9 @@ data class PlayerUiState(
     /** The job or its file is gone: nothing to play. */
     val missing: Boolean = false,
     val error: String? = null,
+    val speed: Float = 1f,
+    /** Name of the Cast / AirPlay device playing the video, or null when it plays here. */
+    val remoteDevice: String? = null,
 )
 
 /**
@@ -63,6 +66,14 @@ class PlaybackController(
         override fun onEnded() = savePosition()
 
         override fun onError(message: String) = _state.update { it.copy(error = message) }
+
+        override fun onSpeedChanged(speed: Float) {
+            if (speed <= 0f || speed == _state.value.speed) return
+            _state.update { it.copy(speed = speed) }
+            jobId?.let { id -> persistScope.launch { repository.saveSpeed(id, speed) } }
+        }
+
+        override fun onRemoteChanged(deviceName: String?) = _state.update { it.copy(remoteDevice = deviceName) }
     }
 
     /** Loads the job's file at its saved position and starts playing. */
@@ -76,8 +87,9 @@ class PlaybackController(
             _state.value = PlayerUiState(job = job, missing = true)
             return
         }
-        _state.value = PlayerUiState(job = job)
-        player.load(PlayableMedia.forFile(path), startAtMs = if (job.watched) 0 else job.positionMs, playWhenReady = true)
+        _state.value = PlayerUiState(job = job, speed = job.playbackSpeed)
+        player.load(PlayableMedia.forFile(path, job.displayTitle), startAtMs = if (job.watched) 0 else job.positionMs, playWhenReady = true)
+        if (job.playbackSpeed != 1f) player.setSpeed(job.playbackSpeed) // the speed this video was left at
         saver?.cancel()
         saver = scope.launch {
             while (isActive) {

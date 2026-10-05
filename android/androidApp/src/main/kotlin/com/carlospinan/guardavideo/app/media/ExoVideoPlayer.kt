@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
@@ -40,6 +41,10 @@ class ExoVideoPlayer(context: Context) : VideoPlayer {
         override fun onPlayerError(error: PlaybackException) {
             listener?.onError(error.errorCodeName)
         }
+
+        override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
+            listener?.onSpeedChanged(playbackParameters.speed) // chosen in PlayerView's ⚙ menu
+        }
     }
 
     init {
@@ -49,6 +54,9 @@ class ExoVideoPlayer(context: Context) : VideoPlayer {
     override val positionMs: Long get() = media3.currentPosition
     override val durationMs: Long get() = media3.duration.takeIf { it > 0 } ?: 0
     override val isPlaying: Boolean get() = media3.isPlaying
+    override val speed: Float get() = media3.playbackParameters.speed
+
+    override fun setSpeed(speed: Float) = media3.setPlaybackSpeed(speed)
 
     override fun load(media: PlayableMedia, startAtMs: Long, playWhenReady: Boolean) {
         val item = MediaItem.Builder()

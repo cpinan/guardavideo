@@ -17,11 +17,25 @@ final class AvVideoPlayer: NSObject, VideoPlayer {
         observations.append(avPlayer.observe(\.timeControlStatus, options: [.new]) { [weak self] player, _ in
             self?.listener?.onPlayingChanged(playing: player.timeControlStatus == .playing)
         })
+        // Speed picked in the native controls: remembered per video by the shared controller.
+        observations.append(avPlayer.observe(\.rate, options: [.new]) { [weak self] player, _ in
+            if player.rate > 0 { self?.listener?.onSpeedChanged(speed: player.rate) }
+        })
+        // AirPlay is iOS's Cast: the shared state shows where the video is playing.
+        observations.append(avPlayer.observe(\.isExternalPlaybackActive, options: [.new]) { [weak self] player, _ in
+            self?.listener?.onRemoteChanged(deviceName: player.isExternalPlaybackActive ? "AirPlay" : nil)
+        })
     }
 
     var positionMs: Int64 { ms(avPlayer.currentTime()) }
     var durationMs: Int64 { avPlayer.currentItem.map { ms($0.duration) } ?? 0 }
     var isPlaying: Bool { avPlayer.timeControlStatus == .playing }
+    var speed: Float { avPlayer.defaultRate }
+
+    func setSpeed(speed: Float) {
+        avPlayer.defaultRate = speed // used by play()
+        if avPlayer.rate > 0 { avPlayer.rate = speed }
+    }
 
     func load(media: PlayableMedia, startAtMs: Int64, playWhenReady: Bool) {
         let file = URL(fileURLWithPath: media.path)

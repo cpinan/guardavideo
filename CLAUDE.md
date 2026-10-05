@@ -28,7 +28,8 @@ Proyecto Gradle propio (AGP 9.3.1, Kotlin 2.4.10). Descarga **en el teléfono**,
   con `LocalMediaServer` (loopback + token). Sin share extension: `guardavideo://download?url=…` (Atajos).
 - **Reproductor (fachada):** `shared/player/VideoPlayer` (interfaz) + `PlaybackController` (reglas compartidas:
   reanudar, guardar posición cada 3 s, contar vista). Android: `ExoVideoPlayer` (Media3); iOS: `AvVideoPlayer`
-  (Swift). Solo la superficie de video es nativa. No llamar `release` a métodos de interfaces exportadas a iOS.
+  (Swift). Solo la superficie de video es nativa. Android: `SwitchingVideoPlayer` alterna ExoPlayer ↔ CastPlayer
+  (Google Cast; `LanMediaServer` sirve el archivo al Chromecast). Velocidad por video (Room v3). No llamar `release` a métodos de interfaces exportadas a iOS.
 - **Biblioteca:** estantes, filtros, orden y búsqueda en `shared/library/Browse.kt` (portado de `lib/shelves.ts`).
   Room en v2 (AutoMigration 1→2). UI Android con la paleta de la web (`ui/theme`), tema claro/oscuro/sistema.
 - **ViewModels nunca reciben `Context`**: lo que lo necesita (ExoPlayer, WorkManager) se crea en un módulo Hilt

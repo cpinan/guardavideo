@@ -17,7 +17,13 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.PictureInPictureModeChangedInfo
 import androidx.core.util.Consumer
 import com.carlospinan.guardavideo.app.MainActivity
-import com.carlospinan.guardavideo.app.media.ExoVideoPlayer
+import com.carlospinan.guardavideo.app.cast.CastButton
+import com.carlospinan.guardavideo.app.cast.SwitchingVideoPlayer
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -83,16 +89,30 @@ fun PlayerScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltViewModel(
             AndroidView(
                 factory = { context ->
                     PlayerView(context).apply {
-                        // The only Media3-specific line in the screen: bind the native surface.
-                        player = (viewModel.player as ExoVideoPlayer).media3
+                        // Bind the native surface: ExoPlayer here, CastPlayer while casting.
+                        player = (viewModel.player as SwitchingVideoPlayer).surface
                         keepScreenOn = true
                         setShowNextButton(false)
                         setShowPreviousButton(false)
                     }
                 },
-                update = { view -> view.useController = !inPip }, // the PiP window has system controls
+                update = { view ->
+                    view.useController = !inPip // the PiP window has system controls
+                    val surface = (viewModel.player as SwitchingVideoPlayer).surface
+                    if (view.player !== surface) view.player = surface // casting started or ended
+                    if (state.remoteDevice != null) view.showController()
+                },
                 modifier = Modifier.fillMaxSize(),
             )
+        }
+        state.remoteDevice?.let { device ->
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.align(Alignment.Center).padding(24.dp),
+            ) {
+                Icon(Icons.Rounded.Cast, contentDescription = null, tint = Color.White, modifier = Modifier.size(56.dp))
+                Text(stringResource(R.string.casting_on, device), color = Color.White, modifier = Modifier.padding(top = 12.dp))
+            }
         }
         if (!inPip) {
             val buttonColors = IconButtonDefaults.iconButtonColors(containerColor = Color.Black.copy(alpha = 0.5f), contentColor = Color.White)
@@ -101,6 +121,11 @@ fun PlayerScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltViewModel(
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
                 }
                 Spacer(Modifier.weight(1f))
+                if (!missing) {
+                    Box(Modifier.size(48.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.5f)), contentAlignment = Alignment.Center) {
+                        CastButton(Modifier.size(40.dp))
+                    }
+                }
                 state.job?.let { job ->
                     val context = LocalContext.current
                     IconButton(onClick = { shareOriginalLink(context, job) }, colors = buttonColors) {

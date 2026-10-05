@@ -4,4 +4,10 @@
     <style name="Theme.Guardavideo" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/window</item>
     </style>
+    <!-- MediaRouteButton and its device picker need an AppCompat theme (the app itself is Compose). -->
+    <style name="Theme.Guardavideo.Cast" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/icon_background</item>
+        <!-- White icon: the button sits on the player's dark overlay. -->
+        <item name="mediaRouteButtonTint">@android:color/white</item>
+    </style>
 </resources>

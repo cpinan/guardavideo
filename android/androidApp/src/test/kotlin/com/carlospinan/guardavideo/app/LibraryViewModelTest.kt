@@ -136,6 +136,21 @@ class LibraryViewModelTest {
         assertEquals(listOf("d"), groups[2].pending.map { it.id })
     }
 
+    @Test
+    fun searchShowsAPlainListOfMatchesAndClosingClearsIt() = runTest {
+        repo.create("https://x.org/receta-de-pan.mp4", null)
+        repo.create("https://x.org/paisaje.mp4", null)
+        vm.openSearch()
+        vm.onQuery("PAN")
+        // The state is built off the main thread: wait for it rather than reading it at once.
+        val state = vm.state.first { it.searching && it.total == 2 }
+        assertEquals(listOf("receta-de-pan.mp4"), state.flat.map { it.displayTitle })
+        assertTrue(state.groups.isEmpty())
+        vm.closeSearch()
+        assertTrue(!vm.searchOpen)
+        assertTrue(!vm.state.first { !it.searching }.searching)
+    }
+
     private companion object {
         const val NOW = 1_790_000_000_000L + 12 * 3_600_000L // midday UTC
     }

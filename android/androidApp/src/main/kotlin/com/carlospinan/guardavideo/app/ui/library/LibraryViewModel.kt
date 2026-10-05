@@ -82,6 +82,9 @@ data class LibraryUiState(
     val flat: List<Job> = emptyList(),
 ) {
     val noMatches: Boolean get() = total > 0 && groups.isEmpty() && flat.isEmpty()
+
+    /** Typing in search: shelves and day groups step aside for a plain list of matches. */
+    val searching: Boolean get() = controls.query.isNotBlank()
 }
 
 @HiltViewModel
@@ -108,6 +111,8 @@ class LibraryViewModel @Inject constructor(
         private set
     var submitting by mutableStateOf(false)
         private set
+    var searchOpen by mutableStateOf(false)
+        private set
 
     val source: LinkSource get() = detectSource(url)
     val canSubmit: Boolean get() = policy.canDownload(source)
@@ -133,6 +138,15 @@ class LibraryViewModel @Inject constructor(
     fun onSort(sort: LibrarySort) = controls.update { it.copy(sort = sort) }
 
     fun onQuery(query: String) = controls.update { it.copy(query = query) }
+
+    fun openSearch() {
+        searchOpen = true
+    }
+
+    fun closeSearch() {
+        searchOpen = false
+        controls.update { it.copy(query = "") }
+    }
 
     fun submit() {
         if (submitting || !canSubmit) return
@@ -192,8 +206,8 @@ class LibraryViewModel @Inject constructor(
             shelves = buildShelves(jobs, nowMs),
             counts = LibraryFilter.entries.associateWith { f -> jobs.count(f.test) },
             controls = c,
-            groups = if (c.sort == LibrarySort.Recent) groupByDay(visible, nowMs) else emptyList(),
-            flat = if (c.sort == LibrarySort.Recent) emptyList() else visible,
+            groups = if (c.sort == LibrarySort.Recent && c.query.isBlank()) groupByDay(visible, nowMs) else emptyList(),
+            flat = if (c.sort == LibrarySort.Recent && c.query.isBlank()) emptyList() else visible,
         )
     }
 

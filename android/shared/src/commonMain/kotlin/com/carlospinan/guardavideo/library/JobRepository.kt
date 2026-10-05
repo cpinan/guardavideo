@@ -89,6 +89,10 @@ class JobRepository(
         }
     }
 
+    /** Remembers the speed chosen for this video (clamped to what players support). */
+    suspend fun saveSpeed(id: String, speed: Float): Job? =
+        update(id) { it.copy(playbackSpeed = speed.coerceIn(MIN_SPEED, MAX_SPEED)) }
+
     /** One more play (the player calls it once per opening). */
     suspend fun recordView(id: String): Job? =
         update(id) { if (it.status == JobStatus.Done) it.copy(viewCount = it.viewCount + 1, lastViewedAt = clock()) else it }
@@ -121,6 +125,8 @@ class JobRepository(
     companion object {
         /** Within the last 3 s counts as "watched": the next play starts from the beginning. */
         const val END_MARGIN_MS = 3_000L
+        const val MIN_SPEED = 0.25f
+        const val MAX_SPEED = 3f
     }
 }
 

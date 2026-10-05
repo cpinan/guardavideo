@@ -12,6 +12,11 @@ interface VideoPlayer {
     val durationMs: Long
     val isPlaying: Boolean
 
+    /** Playback rate, 1.0 = normal. */
+    val speed: Float
+
+    fun setSpeed(speed: Float)
+
     fun load(media: PlayableMedia, startAtMs: Long, playWhenReady: Boolean)
 
     fun play()
@@ -35,16 +40,23 @@ interface VideoPlayerListener {
     fun onEnded()
 
     fun onError(message: String)
+
+    /** The user picked another speed in the native controls. */
+    fun onSpeedChanged(speed: Float)
+
+    /** Playback moved to / from another device (Google Cast, AirPlay); [deviceName] when remote. */
+    fun onRemoteChanged(deviceName: String?)
 }
 
 /**
  * A local video to play. [LocalHls] is a playlist that indexes a .ts by byte range: Media3 plays
  * it from disk, AVPlayer needs it over HTTP (the iOS app serves it on loopback).
  */
-data class PlayableMedia(val path: String, val kind: Kind) {
+data class PlayableMedia(val path: String, val kind: Kind, val title: String = "") {
     enum class Kind { File, LocalHls }
 
     companion object {
-        fun forFile(path: String) = PlayableMedia(path, if (path.endsWith(".m3u8")) Kind.LocalHls else Kind.File)
+        fun forFile(path: String, title: String = "") =
+            PlayableMedia(path, if (path.endsWith(".m3u8")) Kind.LocalHls else Kind.File, title)
     }
 }

@@ -28,6 +28,8 @@ data class Job(
     val lastViewedAt: Long? = null,
     /** When the playback position last changed: orders "Seguir viendo". */
     val positionUpdatedAt: Long? = null,
+    /** Last playback speed chosen for this video (1.0 = normal). */
+    val playbackSpeed: Float = 1f,
 ) {
     /** What the UI shows: the title, or the last part of the URL while it is unknown. */
     val displayTitle: String

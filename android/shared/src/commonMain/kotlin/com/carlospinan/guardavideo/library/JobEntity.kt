@@ -26,14 +26,16 @@ data class JobEntity(
     @ColumnInfo(name = "view_count", defaultValue = "0") val viewCount: Int = 0,
     @ColumnInfo(name = "last_viewed_at") val lastViewedAt: Long? = null,
     @ColumnInfo(name = "position_updated_at") val positionUpdatedAt: Long? = null,
+    // v3
+    @ColumnInfo(name = "playback_speed", defaultValue = "1.0") val playbackSpeed: Float = 1f,
 )
 
 internal fun JobEntity.toJob() = Job(
     id, url, title, JobStatus.valueOf(status), percent, quality, error, retries, filePath, sizeBytes,
-    createdAt, starred, positionMs, durationMs, watched, viewCount, lastViewedAt, positionUpdatedAt,
+    createdAt, starred, positionMs, durationMs, watched, viewCount, lastViewedAt, positionUpdatedAt, playbackSpeed,
 )
 
 internal fun Job.toEntity() = JobEntity(
     id, url, title, status.name, percent, quality, error, retries, filePath, sizeBytes,
-    createdAt, starred, positionMs, durationMs, watched, viewCount, lastViewedAt, positionUpdatedAt,
+    createdAt, starred, positionMs, durationMs, watched, viewCount, lastViewedAt, positionUpdatedAt, playbackSpeed,
 )

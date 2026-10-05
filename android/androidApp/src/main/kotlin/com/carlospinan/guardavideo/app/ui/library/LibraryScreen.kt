@@ -28,6 +28,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BrightnessAuto
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Download
@@ -65,7 +66,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
@@ -148,8 +152,12 @@ fun LibraryScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
-                item(key = "header") { Header(themeMode, onToggleTheme) }
-                item(key = "form") {
+                item(key = "header") { Header(themeMode, onToggleTheme, onSearch = viewModel::openSearch) }
+                if (viewModel.searchOpen) {
+                    item(key = "search") { SearchBar(state.controls.query, viewModel::onQuery, viewModel::closeSearch) }
+                }
+                // While searching, results come right under the search bar: the form steps aside.
+                if (!viewModel.searchOpen) item(key = "form") {
                     DownloadForm(
                         url = viewModel.url,
                         onUrlChange = viewModel::onUrlChange,
@@ -162,7 +170,7 @@ fun LibraryScreen(
                         onSubmit = submit,
                     )
                 }
-                if (state.videos > 0) {
+                if (state.videos > 0 && !viewModel.searchOpen) {
                     item(key = "summary") {
                         Text(
                             stringResource(R.string.summary, state.videos, formatBytes(context, state.bytes), formatBytes(context, state.freeBytes)),
@@ -183,6 +191,21 @@ fun LibraryScreen(
 }
 
 private fun LazyListScope.libraryContent(state: LibraryUiState, vm: LibraryViewModel, onPlay: (String) -> Unit) {
+    if (state.searching) {
+        // Search results only: a plain list, newest first (or the chosen sort), filters still apply.
+        item(key = "results") {
+            Text(
+                pluralStringResource(R.plurals.search_results, state.flat.size, state.flat.size, state.controls.query),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = LocalBrand.current.muted,
+                modifier = Modifier.padding(horizontal = 20.dp).semantics { liveRegion = LiveRegionMode.Polite },
+            )
+        }
+        item(key = "toolbar") { Toolbar(state, vm) }
+        searchResults(state.flat, vm, onPlay)
+        return
+    }
     item(key = "heading") {
         val brand = LocalBrand.current
         Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp)) {
@@ -251,7 +274,11 @@ private fun LazyListScope.libraryContent(state: LibraryUiState, vm: LibraryViewM
             }
         }
     }
-    items(state.flat, key = { it.id }) { job ->
+    searchResults(state.flat, vm, onPlay)
+}
+
+private fun LazyListScope.searchResults(jobs: List<Job>, vm: LibraryViewModel, onPlay: (String) -> Unit) {
+    items(jobs, key = { it.id }) { job ->
         val modifier = Modifier.padding(horizontal = 16.dp).animateItem()
         if (job.status == com.carlospinan.guardavideo.library.JobStatus.Done) {
             FinishedCard(job, { onPlay(job.id) }, { vm.toggleStar(job) }, { vm.saveToGallery(job) }, { vm.delete(job.id) }, modifier.fillMaxWidth())
@@ -291,7 +318,28 @@ private fun LazyListScope.shelf(
 }
 
 @Composable
-private fun Header(themeMode: ThemeMode, onToggleTheme: () -> Unit) {
+private fun SearchBar(query: String, onQuery: (String) -> Unit, onClose: () -> Unit) {
+    val brand = LocalBrand.current
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() } // keyboard up as soon as search opens
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQuery,
+        placeholder = { Text(stringResource(R.string.search_hint)) },
+        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+        trailingIcon = {
+            IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.close_search)) }
+        },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        shape = RoundedCornerShape(50),
+        colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = brand.card, focusedContainerColor = brand.card),
+        modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth().focusRequester(focus),
+    )
+}
+
+@Composable
+private fun Header(themeMode: ThemeMode, onToggleTheme: () -> Unit, onSearch: () -> Unit) {
     val brand = LocalBrand.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(horizontal = 20.dp)) {
         Logo()
@@ -303,6 +351,9 @@ private fun Header(themeMode: ThemeMode, onToggleTheme: () -> Unit) {
             ThemeMode.System -> Icons.Rounded.BrightnessAuto to R.string.theme_system
             ThemeMode.Light -> Icons.Rounded.LightMode to R.string.theme_light
             ThemeMode.Dark -> Icons.Rounded.DarkMode to R.string.theme_dark
+        }
+        BrandCard {
+            IconButton(onClick = onSearch) { Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.open_search), tint = brand.text) }
         }
         BrandCard {
             IconButton(onClick = onToggleTheme) { Icon(icon, contentDescription = stringResource(label), tint = brand.text) }
@@ -433,19 +484,8 @@ private fun Toolbar(state: LibraryUiState, vm: LibraryViewModel) {
                 )
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp)) {
-            SortPicker(c.sort, vm::onSort, Modifier.weight(1f))
-            OutlinedTextField(
-                value = c.query,
-                onValueChange = vm::onQuery,
-                placeholder = { Text(stringResource(R.string.search)) },
-                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                singleLine = true,
-                shape = RoundedCornerShape(50),
-                colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = brand.card2, focusedContainerColor = brand.card),
-                modifier = Modifier.weight(1f),
-            )
-        }
+        // Search lives in the header (🔍), so the sort gets the whole row.
+        SortPicker(c.sort, vm::onSort, Modifier.padding(horizontal = 16.dp).fillMaxWidth())
         if ((state.counts[LibraryFilter.Failed] ?: 0) > 0) {
             TextButton(onClick = vm::clearFailed, modifier = Modifier.padding(horizontal = 8.dp)) {
                 Text(stringResource(R.string.clear_failed), color = brand.err)

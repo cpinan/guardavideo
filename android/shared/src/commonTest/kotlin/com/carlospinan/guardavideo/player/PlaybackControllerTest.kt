@@ -23,6 +23,14 @@ class PlaybackControllerTest {
         override var positionMs = 0L
         override var durationMs = 100_000L
         override var isPlaying = false
+        private var rate = 1f
+        override val speed: Float get() = rate
+        val speedsSet = mutableListOf<Float>()
+
+        override fun setSpeed(speed: Float) {
+            rate = speed
+            speedsSet += speed
+        }
 
         override fun load(media: PlayableMedia, startAtMs: Long, playWhenReady: Boolean) {
             loaded = media to startAtMs
@@ -65,7 +73,7 @@ class PlaybackControllerTest {
         val id = video(file = "/v/v1.m3u8", position = 42_000)
         val controller = PlaybackController(player, repo, this, fileExists = { true })
         controller.open(id)
-        assertEquals(PlayableMedia("/v/v1.m3u8", PlayableMedia.Kind.LocalHls) to 42_000L, player.loaded)
+        assertEquals(PlayableMedia("/v/v1.m3u8", PlayableMedia.Kind.LocalHls, "a.mp4") to 42_000L, player.loaded)
         controller.close()
     }
 
@@ -96,6 +104,32 @@ class PlaybackControllerTest {
         runCurrent()
         assertEquals(55_000, repo.get(id)!!.positionMs)
         assertTrue(player.released)
+    }
+
+    @Test
+    fun theSpeedIsRestoredOnOpenAndSavedWhenChanged() = runTest {
+        val id = video()
+        repo.saveSpeed(id, 1.5f)
+        val controller = PlaybackController(player, repo, backgroundScope, fileExists = { true })
+        controller.open(id)
+        assertEquals(listOf(1.5f), player.speedsSet)
+        assertEquals(1.5f, controller.state.value.speed)
+
+        player.current!!.onSpeedChanged(2f) // picked in the native controls
+        runCurrent()
+        assertEquals(2f, repo.get(id)!!.playbackSpeed)
+        repo.saveSpeed(id, 9f)
+        assertEquals(3f, repo.get(id)!!.playbackSpeed) // clamped
+    }
+
+    @Test
+    fun normalSpeedIsNotForcedAndRemotePlaybackIsReported() = runTest {
+        val id = video()
+        val controller = PlaybackController(player, repo, backgroundScope, fileExists = { true })
+        controller.open(id)
+        assertEquals(emptyList(), player.speedsSet)
+        player.current!!.onRemoteChanged("Sala TV")
+        assertEquals("Sala TV", controller.state.value.remoteDevice)
     }
 
     @Test
