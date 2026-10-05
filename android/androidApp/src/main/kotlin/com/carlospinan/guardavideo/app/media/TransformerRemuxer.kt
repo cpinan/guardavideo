@@ -7,6 +7,7 @@ import androidx.media3.transformer.Composition
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
+import com.carlospinan.guardavideo.download.DownloadResult
 import com.carlospinan.guardavideo.library.MediaPostProcessor
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +30,8 @@ class TransformerRemuxer @Inject constructor(
     private val fs: FileSystem,
 ) : MediaPostProcessor {
 
-    override suspend fun process(file: Path): Path {
+    override suspend fun process(result: DownloadResult): Path {
+        val file = result.path
         if (!file.name.endsWith(".ts")) return file
         val stem = file.name.removeSuffix(".ts")
         val tmp = file.parent!! / "$stem.remux.part" // never mistaken for a finished file

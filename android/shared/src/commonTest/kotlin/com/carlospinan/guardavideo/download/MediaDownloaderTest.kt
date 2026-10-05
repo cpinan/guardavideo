@@ -99,6 +99,7 @@ class MediaDownloaderTest {
         assertContentEquals(byteArrayOf(0, 0, 1, 1, 2, 2, 3, 3, 4, 4), fs.read(result.path) { readByteArray() })
         assertTrue(requests.none { it.endsWith("low.m3u8") })
         assertEquals(listOf(20f, 40f, 60f, 80f, 100f), rec.progress)
+        assertEquals((0..4).map { SegmentSpan(2.0, it * 2L, 2) }, result.segments)
     }
 
     @Test

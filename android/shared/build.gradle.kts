@@ -14,8 +14,13 @@ kotlin {
         // compiles nothing and silently never runs (lesson from VeterinariosApp).
         withHostTest {}
     }
-    iosArm64()
-    iosSimulatorArm64()
+    // iOS: a static framework the Xcode app (../ios) links; built by the Xcode build phase.
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
+        target.binaries.framework {
+            baseName = "Shared"
+            isStatic = true
+        }
+    }
 
     sourceSets {
         commonMain.dependencies {

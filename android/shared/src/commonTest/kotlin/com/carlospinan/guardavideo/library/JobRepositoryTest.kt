@@ -56,6 +56,15 @@ class JobRepositoryTest {
     }
 
     @Test
+    fun deleteAlsoRemovesCompanionFilesOfTheSameName() = runTest {
+        val video = done("https://x.org/a.m3u8", "/v/id1.m3u8")
+        fs.write("/v/id1.ts".toPath()) { writeUtf8("ts") }
+        fs.write("/v/id10.ts".toPath()) { writeUtf8("other job") }
+        assertTrue(repo.delete(video.id))
+        assertEquals(listOf("id10.ts"), fs.list("/v".toPath()).map { it.name })
+    }
+
+    @Test
     fun activeJobsCannotBeDeletedAndOnlyFailuresRetry() = runTest {
         val job = assertIs<CreateResult.Created>(repo.create("https://x.org/a.mp4", null)).job
         assertFalse(repo.delete(job.id))

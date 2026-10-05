@@ -1,0 +1,49 @@
+# Generate the Xcode project with: cd ios && xcodegen   (the .xcodeproj is not checked in)
+name: Guardavideo
+options:
+  bundleIdPrefix: com.carlospinan
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    # Gradle runs from a build phase; Xcode's script sandbox would block it.
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    # Kotlin builds iosArm64 + iosSimulatorArm64 only (Apple silicon); no Intel simulator slice.
+    EXCLUDED_ARCHS[sdk=iphonesimulator*]: x86_64
+targets:
+  Guardavideo:
+    type: application
+    platform: iOS
+    sources: [Guardavideo]
+    info:
+      path: Guardavideo/Info.plist
+      properties:
+        CFBundleDisplayName: Guardavideo
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        # Videos live in Documents/Videos and show up in the Files app ("On My iPhone").
+        # guardavideo://download?url=…  (start) · guardavideo://add?url=…  (fill the field). An iOS
+        # Shortcut in the share sheet can open these: the lightweight "Share → Guardavideo".
+        CFBundleURLTypes:
+          - CFBundleURLName: com.carlospinan.guardavideo
+            CFBundleURLSchemes: [guardavideo]
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        # Picture-in-Picture and audio with the screen locked.
+        UIBackgroundModes: [audio]
+        # Direct media links are sometimes plain http (personal tool, user-chosen links).
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.carlospinan.guardavideo
+        FRAMEWORK_SEARCH_PATHS: $(SRCROOT)/../android/shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)
+        OTHER_LDFLAGS: [-framework, Shared]
+        CODE_SIGN_STYLE: Automatic
+    preBuildScripts:
+      - name: Build Kotlin framework
+        basedOnDependencyAnalysis: false
+        script: |
+          cd "$SRCROOT/../android"
+          ./gradlew :shared:embedAndSignAppleFrameworkForXcode

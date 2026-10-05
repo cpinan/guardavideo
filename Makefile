@@ -1,4 +1,4 @@
-.PHONY: install dev-api dev-api-debug dev-web share serve tailscale-serve ui-audit android-check android-install lint typecheck test test-fast check fmt clean
+.PHONY: install dev-api dev-api-debug dev-web share serve tailscale-serve ui-audit android-check android-install ios-build lint typecheck test test-fast check fmt clean
 
 install:  ## Instala dependencias de backend y frontend
 	cd backend && pip install -e ".[dev]"
@@ -51,6 +51,10 @@ android-check:  ## App Android: tests del módulo compartido (KMP) + tests de la
 
 android-install:  ## Compila e instala la app Android en el emulador/dispositivo ($$ANDROID_SERIAL)
 	android/tools/dev.sh install
+
+ios-build:  ## App iOS: genera el proyecto (XcodeGen) y compila para el simulador (incluye el framework KMP)
+	cd ios && xcodegen -q && xcodebuild -project Guardavideo.xcodeproj -scheme Guardavideo -sdk iphonesimulator \
+		-destination 'generic/platform=iOS Simulator' -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO -quiet build
 
 ui-audit:  ## Capturas + revisión de desborde/objetivos táctiles en Chrome headless (requiere dev-api y dev-web)
 	node tools/ui-audit.mjs http://localhost:5173/ ui-audit-out

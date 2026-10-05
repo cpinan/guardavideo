@@ -23,7 +23,7 @@ class DownloadRunnerTest {
     private val repo = JobRepository(FakeJobDao(), fs, clock = { 1 }, newId = { "j1" })
 
     private fun runner(
-        postProcessor: MediaPostProcessor = MediaPostProcessor { it },
+        postProcessor: MediaPostProcessor = MediaPostProcessor { it.path },
         block: suspend (LinkSource, String, Path, DownloadListener) -> DownloadResult,
     ) =
         DownloadRunner(
@@ -101,7 +101,8 @@ class DownloadRunnerTest {
     @Test
     fun postProcessingReplacesTheFileAndItsSize() = runTest {
         val job = queued()
-        val remux = MediaPostProcessor { path ->
+        val remux = MediaPostProcessor { result ->
+            val path = result.path
             val mp4 = path.parent!! / "${path.name.substringBeforeLast('.')}.mp4"
             fs.write(mp4) { writeUtf8("remuxed!") }
             fs.delete(path)

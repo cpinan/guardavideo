@@ -20,6 +20,11 @@ directos (.m3u8 / .mp4); los enlaces de páginas (YouTube…) necesitan yt-dlp y
   FakeFileSystem): `./gradlew :shared:testAndroidHostTest` (sin `withHostTest {}` no corren).
 - `:androidApp`: Compose M3, Hilt, WorkManager (worker foreground dataSync), Media3, Coil (miniatura del video).
 - `make android-check` · `make android-install` · `android/tools/dev.sh` (share/tap/shot/ui/files en el emulador).
+- `:androidApp` además: remux .ts→.mp4 con Media3 Transformer (sin recodificar), «Guardar en la galería»
+  (MediaStore, minSdk 29), Picture-in-Picture.
+- **iOS (`ios/`)**: SwiftUI sobre el mismo `:shared` (`GuardavideoIos` en `iosMain`). `make ios-build`.
+  AVPlayer no reproduce HLS desde un archivo: los .ts se indexan en un .m3u8 local (byte ranges) y se sirven
+  con `LocalMediaServer` (loopback + token). Sin share extension: `guardavideo://download?url=…` (Atajos).
 - **ViewModels nunca reciben `Context`**: lo que lo necesita (ExoPlayer, WorkManager) se crea en un módulo Hilt
   y el VM recibe una interfaz (`Player`, `DownloadQueue`). Textos de UI en `strings.xml`.
 

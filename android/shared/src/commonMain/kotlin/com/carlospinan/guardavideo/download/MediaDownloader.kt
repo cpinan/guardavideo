@@ -52,7 +52,19 @@ interface DownloadListener {
     fun retrying(attempt: Int) {}
 }
 
-data class DownloadResult(val path: Path, val title: String?, val sizeBytes: Long)
+/** Where one HLS segment landed inside the concatenated .ts file. */
+data class SegmentSpan(val durationSec: Double, val offset: Long, val length: Long)
+
+/**
+ * [segments] is filled for HLS saved as MPEG-TS: with it a platform can index the single file as
+ * a local playlist (iOS) instead of remuxing it.
+ */
+data class DownloadResult(
+    val path: Path,
+    val title: String?,
+    val sizeBytes: Long,
+    val segments: List<SegmentSpan> = emptyList(),
+)
 
 /** Seam for tests and for the runner: [MediaDownloader] is the real implementation. */
 interface VideoDownloader {
@@ -173,6 +185,8 @@ class MediaDownloader(
         val keys = KeyCache { keyUrl -> fetchBytes(keyUrl, listener) }
         val total = media.segments.size
         var written = 0
+        var offset = 0L
+        val spans = mutableListOf<SegmentSpan>()
         var currentInit: String? = null
         fs.sink(part).buffer().use { sink ->
             // Batches of `workers`: parallel network, ordered writes, bounded memory.
@@ -185,20 +199,24 @@ class MediaDownloader(
                 batch.forEachIndexed { i, (_, segment) ->
                     val init = segment.initUri
                     if (init != null && init != currentInit) { // fMP4: the init section goes first
-                        sink.write(fetchBytes(init, listener))
+                        val initBytes = fetchBytes(init, listener)
+                        sink.write(initBytes)
+                        offset += initBytes.size
                         currentInit = init
                     }
                     sink.write(bytes[i])
+                    spans += SegmentSpan(segment.duration, offset, bytes[i].size.toLong())
+                    offset += bytes[i].size
                     written++
                     listener.progress(written * 100f / total)
                 }
             }
         }
         // Concatenated MPEG-TS plays as .ts; fMP4 segments with their init section form an .mp4.
-        val extension = if (media.segments.any { it.initUri != null }) "mp4" else "ts"
-        val file = destDir / "$id.$extension"
+        val fmp4 = media.segments.any { it.initUri != null }
+        val file = destDir / "$id.${if (fmp4) "mp4" else "ts"}"
         fs.atomicMove(part, file)
-        return DownloadResult(file, titleFrom(url), fs.metadata(file).size ?: 0)
+        return DownloadResult(file, titleFrom(url), fs.metadata(file).size ?: 0, if (fmp4) emptyList() else spans)
     }
 
     private suspend fun mediaPlaylist(url: String, quality: Int?, listener: DownloadListener): Playlist.Media =

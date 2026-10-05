@@ -89,9 +89,17 @@ class JobRepository(
         if (job.status.isActive) return false
         val path = job.filePath
         val shared = path != null && dao.all().any { it.id != id && it.filePath == path }
-        if (path != null && !shared) fs.delete(path.toPath(), mustExist = false)
+        if (path != null && !shared) deleteWithCompanions(path.toPath())
         dao.delete(id)
         true
+    }
+
+    /** The file plus anything named like it (a local .m3u8 index next to its .ts, for example). */
+    private fun deleteWithCompanions(file: okio.Path) {
+        val stem = file.name.substringBefore('.')
+        val dir = file.parent
+        val siblings = dir?.let { fs.listOrNull(it) }.orEmpty().filter { it.name.substringBefore('.') == stem }
+        (siblings + file).toSet().forEach { fs.delete(it, mustExist = false) }
     }
 
     private fun hasFile(job: Job): Boolean =

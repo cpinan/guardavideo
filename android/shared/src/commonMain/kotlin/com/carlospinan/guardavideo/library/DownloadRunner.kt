@@ -2,6 +2,7 @@ package com.carlospinan.guardavideo.library
 
 import com.carlospinan.guardavideo.download.DownloadException
 import com.carlospinan.guardavideo.download.DownloadListener
+import com.carlospinan.guardavideo.download.DownloadResult
 import com.carlospinan.guardavideo.download.VideoDownloader
 import com.carlospinan.guardavideo.source.detectSource
 import kotlinx.coroutines.CancellationException
@@ -22,7 +23,7 @@ import okio.Path
  * never fails the job: the original download is kept.
  */
 fun interface MediaPostProcessor {
-    suspend fun process(file: Path): Path
+    suspend fun process(result: DownloadResult): Path
 }
 
 /**
@@ -37,7 +38,7 @@ class DownloadRunner(
     private val downloader: VideoDownloader,
     private val fs: FileSystem,
     private val downloadsDir: Path,
-    private val postProcessor: MediaPostProcessor = MediaPostProcessor { it },
+    private val postProcessor: MediaPostProcessor = MediaPostProcessor { it.path },
 ) {
     /** Returns the final status, or null if the job was deleted or already finished. */
     suspend fun run(id: String, onUpdate: (Job) -> Unit = {}): JobStatus? {
@@ -68,7 +69,7 @@ class DownloadRunner(
                     .also { writer.cancel() }
             }
             val file = try {
-                postProcessor.process(result.path)
+                postProcessor.process(result)
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
