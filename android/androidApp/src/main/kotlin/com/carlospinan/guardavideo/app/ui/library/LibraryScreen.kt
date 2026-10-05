@@ -29,6 +29,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Download
@@ -105,6 +107,8 @@ fun LibraryScreen(
     onPlay: (String) -> Unit,
     themeMode: ThemeMode,
     onToggleTheme: () -> Unit,
+    onHistory: () -> Unit,
+    onProviders: () -> Unit,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -152,7 +156,12 @@ fun LibraryScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
-                item(key = "header") { Header(themeMode, onToggleTheme, onSearch = viewModel::openSearch) }
+                item(key = "header") { Header(themeMode, onToggleTheme, onSearch = viewModel::openSearch, onHistory = onHistory) }
+                val failed = state.counts[LibraryFilter.Failed] ?: 0
+                if (failed > 0 && !viewModel.searchOpen) {
+                    // Hard to miss: failures get a banner, not just a chip further down.
+                    item(key = "failed") { FailedBanner(failed, onSee = { viewModel.onFilter(LibraryFilter.Failed) }) }
+                }
                 if (viewModel.searchOpen) {
                     item(key = "search") { SearchBar(state.controls.query, viewModel::onQuery, viewModel::closeSearch) }
                 }
@@ -168,6 +177,7 @@ fun LibraryScreen(
                         linkMessage = viewModel.linkMessage,
                         submitting = viewModel.submitting,
                         onSubmit = submit,
+                        onProviders = onProviders,
                     )
                 }
                 if (state.videos > 0 && !viewModel.searchOpen) {
@@ -339,7 +349,7 @@ private fun SearchBar(query: String, onQuery: (String) -> Unit, onClose: () -> U
 }
 
 @Composable
-private fun Header(themeMode: ThemeMode, onToggleTheme: () -> Unit, onSearch: () -> Unit) {
+private fun Header(themeMode: ThemeMode, onToggleTheme: () -> Unit, onSearch: () -> Unit, onHistory: () -> Unit) {
     val brand = LocalBrand.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(horizontal = 20.dp)) {
         Logo()
@@ -351,6 +361,9 @@ private fun Header(themeMode: ThemeMode, onToggleTheme: () -> Unit, onSearch: ()
             ThemeMode.System -> Icons.Rounded.BrightnessAuto to R.string.theme_system
             ThemeMode.Light -> Icons.Rounded.LightMode to R.string.theme_light
             ThemeMode.Dark -> Icons.Rounded.DarkMode to R.string.theme_dark
+        }
+        BrandCard {
+            IconButton(onClick = onHistory) { Icon(Icons.Rounded.History, contentDescription = stringResource(R.string.history), tint = brand.text) }
         }
         BrandCard {
             IconButton(onClick = onSearch) { Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.open_search), tint = brand.text) }
@@ -373,6 +386,7 @@ private fun DownloadForm(
     linkMessage: String,
     submitting: Boolean,
     onSubmit: () -> Unit,
+    onProviders: () -> Unit,
 ) {
     val context = LocalContext.current
     val brand = LocalBrand.current
@@ -405,7 +419,35 @@ private fun DownloadForm(
                 modifier = Modifier.fillMaxWidth(),
                 icon = { Icon(Icons.Rounded.Download, contentDescription = null, tint = if (canSubmit) Color.White else brand.muted, modifier = Modifier.size(20.dp)) },
             )
+            TextButton(onClick = onProviders, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                Text(stringResource(R.string.providers_link), color = brand.accent, fontSize = 13.sp)
+            }
         }
+    }
+}
+
+@Composable
+private fun FailedBanner(count: Int, onSee: () -> Unit) {
+    val brand = LocalBrand.current
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .padding(horizontal = 16.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(brand.err.copy(alpha = 0.14f))
+            .padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Icon(Icons.Rounded.ErrorOutline, contentDescription = null, tint = brand.err)
+        Text(
+            pluralStringResource(R.plurals.failed_banner, count, count),
+            color = brand.err,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
+            modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
+        )
+        TextButton(onClick = onSee) { Text(stringResource(R.string.see), color = brand.err, fontWeight = FontWeight.Bold) }
     }
 }
 

@@ -15,8 +15,8 @@ android {
         applicationId = "com.carlospinan.guardavideo"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 5
-        versionName = "0.5.0"
+        versionCode = 6
+        versionName = "0.6.0"
         // yt-dlp ships a Python runtime per ABI: arm64 covers current phones and Apple-silicon emulators.
         ndk { abiFilters += "arm64-v8a" }
     }

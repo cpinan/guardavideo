@@ -60,6 +60,24 @@ import com.carlospinan.guardavideo.app.ui.shareOriginalLink
 import com.carlospinan.guardavideo.app.ui.theme.LocalBrand
 import com.carlospinan.guardavideo.library.Job
 import com.carlospinan.guardavideo.library.JobStatus
+import com.carlospinan.guardavideo.library.FailureKind
+import com.carlospinan.guardavideo.library.classifyFailure
+import com.carlospinan.guardavideo.app.ui.openInBrowser
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.HourglassTop
+import androidx.compose.material.icons.rounded.LinkOff
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.OpenInBrowser
+import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material.icons.rounded.SdCardAlert
+import androidx.compose.material.icons.rounded.WifiOff
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.text.font.FontFamily
 
 /** Host of the link, for the detail line ("dailymotion.com · 105 MB · hace 2 horas"). */
 private fun hostOf(url: String) = url.substringAfter("://").substringBefore('/').removePrefix("www.")
@@ -108,16 +126,85 @@ fun PendingCard(job: Job, onCancel: () -> Unit, onRetry: () -> Unit, onDelete: (
                     OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
                 }
             } else {
-                job.error?.let { Text(it, fontSize = 13.sp, color = brand.err) }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    GradientButton(stringResource(R.string.retry), onRetry, enabled = true, modifier = Modifier.weight(1f))
-                    OutlinedIconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
-                        Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete))
-                    }
+                FailureDetails(job, onRetry, onDelete)
+            }
+        }
+    }
+}
+
+/** Why it failed (icon, cause, what to do) and the actions that make sense for that cause. */
+@Composable
+private fun FailureDetails(job: Job, onRetry: () -> Unit, onDelete: () -> Unit) {
+    val brand = LocalBrand.current
+    val context = LocalContext.current
+    val cancelled = job.status == JobStatus.Cancelled
+    val kind = classifyFailure(job.error)
+    var details by rememberSaveable { mutableStateOf(false) }
+    Column(
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (cancelled) brand.card2 else brand.err.copy(alpha = 0.10f))
+            .padding(12.dp)
+            .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(if (cancelled) Icons.Rounded.Block else iconFor(kind), contentDescription = null, tint = if (cancelled) brand.muted else brand.err)
+            Text(
+                if (cancelled) stringResource(R.string.status_cancelled) else kind.title,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = if (cancelled) brand.text else brand.err,
+            )
+        }
+        if (!cancelled) {
+            if (kind.explanation.isNotEmpty()) Text(kind.explanation, fontSize = 13.sp, color = brand.text)
+            Text(kind.hint, fontSize = 13.sp, color = brand.muted)
+            if (!job.error.isNullOrBlank()) {
+                Text(
+                    stringResource(if (details) R.string.hide_details else R.string.show_details),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = brand.accent,
+                    modifier = Modifier.clickable(role = Role.Button) { details = !details }.padding(vertical = 4.dp),
+                )
+                if (details) {
+                    Text(job.error!!, fontSize = 12.sp, fontFamily = FontFamily.Monospace, color = brand.muted)
                 }
             }
         }
     }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (cancelled || kind.retryable) {
+            GradientButton(stringResource(R.string.retry), onRetry, enabled = true, modifier = Modifier.weight(1f))
+        } else {
+            // Retrying would only fail again: let the user check the site instead.
+            OutlinedButton(onClick = { openInBrowser(context, job.url) }, modifier = Modifier.weight(1f).height(48.dp)) {
+                Icon(Icons.Rounded.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.open_in_browser), modifier = Modifier.padding(start = 6.dp))
+            }
+        }
+        if (kind.retryable && !cancelled) {
+            OutlinedIconButton(onClick = { openInBrowser(context, job.url) }, modifier = Modifier.size(48.dp)) {
+                Icon(Icons.Rounded.OpenInBrowser, contentDescription = stringResource(R.string.open_in_browser))
+            }
+        }
+        OutlinedIconButton(onClick = onDelete, modifier = Modifier.size(48.dp)) {
+            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete))
+        }
+    }
+}
+
+private fun iconFor(kind: FailureKind) = when (kind) {
+    FailureKind.Network -> Icons.Rounded.WifiOff
+    FailureKind.Private, FailureKind.LoginRequired, FailureKind.Drm -> Icons.Rounded.Lock
+    FailureKind.GeoBlocked -> Icons.Rounded.Public
+    FailureKind.Removed, FailureKind.NoVideo -> Icons.Rounded.LinkOff
+    FailureKind.Forbidden -> Icons.Rounded.Block
+    FailureKind.RateLimited -> Icons.Rounded.HourglassTop
+    FailureKind.NoSpace -> Icons.Rounded.SdCardAlert
+    FailureKind.Processing, FailureKind.Unknown -> Icons.Rounded.ErrorOutline
 }
 
 /** A finished video: big thumbnail on top, title, details, and Play / save / delete (rail card). */

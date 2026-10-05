@@ -117,6 +117,7 @@ object AppModule {
         JobRepository(
             db.jobs(),
             fs,
+            db.history(),
             clock = System::currentTimeMillis,
             newId = { UUID.randomUUID().toString().replace("-", "").take(12) },
             sitePages = true,

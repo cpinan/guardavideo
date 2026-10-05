@@ -3,7 +3,7 @@
 _Last updated: 2026-10-04 · branch `main` · 0 uncommitted files_
 
 ## Next action
-User tests v0.5.0 on the Pixel (2026-10-05): download a Dailymotion video and check the in-progress card (real title + site thumbnail early, shimmer), Google Cast with a real Chromecast (untested here), per-video speed, search.
+User tests v0.6.0 on the Pixel (2026-10-05): failure banner + explained failure cards, 🕘 Historial (re-download a deleted video), "¿Qué sitios funcionan?", Google Cast with a real Chromecast (untested here).
 
 ## State
 - Web + API (Mac): HLS + yt-dlp downloads, SQLite library, shelves, mobile UI, `make serve` (production on 127.0.0.1:8080, debug off) + `make tailscale-serve` for private sharing. Repo `github.com/cpinan/guardavideo` (private); CI runs `check` (web) and `android` jobs, both green.

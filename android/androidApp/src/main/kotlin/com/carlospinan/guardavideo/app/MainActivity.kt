@@ -13,7 +13,9 @@ import androidx.compose.runtime.setValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.carlospinan.guardavideo.app.ui.history.HistoryScreen
 import com.carlospinan.guardavideo.app.ui.library.LibraryScreen
+import com.carlospinan.guardavideo.app.ui.providers.ProvidersScreen
 import com.carlospinan.guardavideo.app.ui.library.extractUrl
 import com.carlospinan.guardavideo.app.ui.player.PlayerScreen
 import com.carlospinan.guardavideo.app.ui.theme.GuardavideoTheme
@@ -28,6 +30,12 @@ object LibraryRoute
 
 @Serializable
 data class PlayerRoute(val id: String)
+
+@Serializable
+object HistoryRoute
+
+@Serializable
+object ProvidersRoute
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -64,8 +72,14 @@ class MainActivity : ComponentActivity() {
                             onPlay = { id -> nav.navigate(PlayerRoute(id)) },
                             themeMode = themeMode,
                             onToggleTheme = { themeStore.set(themeMode.next()) },
+                            onHistory = { nav.navigate(HistoryRoute) },
+                            onProviders = { nav.navigate(ProvidersRoute) },
                         )
                     }
+                    composable<HistoryRoute> {
+                        HistoryScreen(onBack = { nav.popBackStack() }, onOpenVideo = { id -> nav.navigate(PlayerRoute(id)) })
+                    }
+                    composable<ProvidersRoute> { ProvidersScreen(onBack = { nav.popBackStack() }) }
                     composable<PlayerRoute> { PlayerScreen(onBack = { nav.popBackStack() }) }
                 }
             }

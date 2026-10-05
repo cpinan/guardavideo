@@ -56,9 +56,11 @@ class GuardavideoIos {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val fs = FileSystem.SYSTEM
     private val videosDir: Path = "${documentsPath()}/Videos".toPath()
+    private val database = createDatabase()
     private val repository = JobRepository(
-        createDatabase().jobs(),
+        database.jobs(),
         fs,
+        database.history(),
         clock = { (NSDate().timeIntervalSince1970 * 1000).toLong() },
         newId = { NSUUID().UUIDString().replace("-", "").lowercase().take(12) },
     )

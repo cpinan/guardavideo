@@ -26,6 +26,8 @@ sealed interface CreateResult {
 class JobRepository(
     private val dao: JobDao,
     private val fs: FileSystem,
+    /** Optional so older call sites and tests can skip it; the apps always pass one. */
+    private val history: HistoryDao? = null,
     private val clock: () -> Long,
     private val newId: () -> String,
     /** True where a site downloader (yt-dlp) exists: Android yes, iOS no. */
@@ -53,20 +55,28 @@ class JobRepository(
         if (existing != null) return CreateResult.Existing(existing)
         val job = Job(id = newId(), url = url, quality = quality, createdAt = clock())
         dao.insert(job.toEntity())
+        record(job)
         CreateResult.Created(job)
     }
 
     /** Applies [change] to the current row; null if the job no longer exists. */
     suspend fun update(id: String, change: (Job) -> Job): Job? = mutex.withLock {
         val current = dao.get(id)?.toJob() ?: return null
-        change(current).also { dao.upsert(it.toEntity()) }
+        change(current).also { updated ->
+            dao.upsert(updated.toEntity())
+            // Progress ticks don't touch history: only what a person would care about later.
+            if (updated.status != current.status || updated.title != current.title) record(updated)
+        }
     }
 
     /** Failed or cancelled jobs go back to the queue, keeping their id and URL. */
     suspend fun retry(id: String): Job? = mutex.withLock {
         val job = dao.get(id)?.toJob() ?: return null
         if (job.status != JobStatus.Error && job.status != JobStatus.Cancelled) return null
-        job.copy(status = JobStatus.Queued, percent = 0f, error = null, retries = 0).also { dao.upsert(it.toEntity()) }
+        job.copy(status = JobStatus.Queued, percent = 0f, error = null, retries = 0).also {
+            dao.upsert(it.toEntity())
+            record(it)
+        }
     }
 
     /** Marks a queued or running job as cancelled (the caller stops the actual work). */
@@ -109,6 +119,8 @@ class JobRepository(
         if (path != null && !shared) deleteWithCompanions(path.toPath())
         job.thumbnailPath?.let { fs.delete(it.toPath(), mustExist = false) }
         dao.delete(id)
+        // The video goes; the record that it was downloaded stays.
+        history?.get(id)?.toEntry()?.let { history.upsert(it.copy(status = HistoryStatus.Deleted, finishedAt = clock()).toEntity()) }
         true
     }
 
@@ -118,6 +130,29 @@ class JobRepository(
         val dir = file.parent
         val siblings = dir?.let { fs.listOrNull(it) }.orEmpty().filter { it.name.substringBefore('.') == stem }
         (siblings + file).toSet().forEach { fs.delete(it, mustExist = false) }
+    }
+
+    fun observeHistory(): Flow<List<HistoryEntry>> =
+        history?.observeAll()?.map { rows -> rows.map { it.toEntry() } } ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    suspend fun removeFromHistory(jobId: String) {
+        history?.delete(jobId)
+    }
+
+    suspend fun clearHistory() {
+        history?.clear()
+    }
+
+    /** First run with history: record the jobs that already exist, so nothing starts empty. */
+    suspend fun seedHistoryIfEmpty() {
+        val h = history ?: return
+        if (h.count() > 0) return
+        dao.all().map { it.toJob() }.forEach { record(it) }
+    }
+
+    private suspend fun record(job: Job) {
+        val h = history ?: return
+        h.upsert(historyOf(job, h.get(job.id)?.toEntry(), clock()).toEntity())
     }
 
     private fun hasFile(job: Job): Boolean =

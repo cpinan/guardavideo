@@ -88,5 +88,33 @@
     <string name="share_link">Compartir enlace</string>
     <string name="casting_on">Reproduciendo en %1$s</string>
     <string name="copy_link">Copiar enlace</string>
+    <string name="link_copied">Enlace copiado</string>
+    <string name="open_in_browser">Abrir en el navegador</string>
+    <string name="show_details">Ver detalles</string>
+    <string name="hide_details">Ocultar detalles</string>
+    <plurals name="failed_banner">
+        <item quantity="one">%1$d descarga falló</item>
+        <item quantity="other">%1$d descargas fallaron</item>
+    </plurals>
+    <string name="see">Ver</string>
+    <string name="history">Historial</string>
+    <string name="history_empty">Aquí aparece cada enlace que descargues, aunque después borres el video.</string>
+    <string name="history_search">Buscar en el historial</string>
+    <string name="history_clear">Borrar historial</string>
+    <string name="history_clear_title">¿Borrar todo el historial?</string>
+    <string name="history_clear_body">Solo se borra la lista de enlaces; tus videos se quedan.</string>
+    <string name="history_downloaded">Descargado</string>
+    <string name="history_in_progress">En curso</string>
+    <string name="history_failed">Falló</string>
+    <string name="history_cancelled">Cancelado</string>
+    <string name="history_deleted">Video eliminado</string>
+    <string name="download_again">Descargar de nuevo</string>
+    <string name="open_video">Abrir video</string>
+    <string name="remove_from_history">Quitar del historial</string>
+    <string name="providers_title">Sitios compatibles</string>
+    <string name="providers_link">¿Qué sitios funcionan?</string>
+    <string name="providers_intro">Guardavideo descarga en el teléfono con yt-dlp, que reconoce más de 1.700 sitios; esta es la lista revisada. También funciona cualquier enlace directo a un video (.m3u8 o .mp4). Si un sitio deja de funcionar, suele bastar con esperar a que yt-dlp se actualice (lo hace solo, una vez al día).</string>
+    <string name="providers_login">Requieren cuenta (aún no soportado)</string>
+    <string name="providers_drm">No compatibles (protegidos con DRM)</string>
     <string name="player_missing">El archivo ya no está en el teléfono</string>
 </resources>

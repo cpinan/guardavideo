@@ -14,17 +14,23 @@ import kotlinx.coroutines.IO
  * shared/schemas (checked in) so migrations can be verified.
  */
 @Database(
-    entities = [JobEntity::class],
-    version = 4,
+    entities = [JobEntity::class, HistoryEntity::class],
+    version = 5,
     exportSchema = true,
     // v2: view_count, last_viewed_at, position_updated_at (new nullable / defaulted columns).
     // v3: playback_speed.
     // v4: thumbnail_path.
-    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4)],
+    // v5: history table.
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3), AutoMigration(from = 3, to = 4),
+        AutoMigration(from = 4, to = 5),
+    ],
 )
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun jobs(): JobDao
+
+    abstract fun history(): HistoryDao
 }
 
 // Room's KSP processor generates the actual implementations.

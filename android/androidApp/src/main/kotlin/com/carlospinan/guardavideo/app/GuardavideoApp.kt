@@ -39,6 +39,7 @@ class GuardavideoApp : Application(), Configuration.Provider {
         // library still calls active (KEEP: no duplicate work if it is already scheduled).
         appScope.launch { repository.active().forEach { queue.enqueue(it.id) } }
         appScope.launch { ytDlpUpdater.updateIfStale() }
+        appScope.launch { repository.seedHistoryIfEmpty() } // first run with history: record what exists
         appScope.launch {
             // Old fragmented MP4s first (they also get their real length), then any missing durations.
             repairFragmentedVideos(repository, fs, postProcessor, probe)

@@ -31,6 +31,8 @@ Proyecto Gradle propio (AGP 9.3.1, Kotlin 2.4.10). Descarga **en el teléfono**,
   (Swift). Solo la superficie de video es nativa. Android: `SwitchingVideoPlayer` alterna ExoPlayer ↔ CastPlayer
   (Google Cast; `LanMediaServer` sirve el archivo al Chromecast). Velocidad por video (Room v3). No llamar `release` a métodos de interfaces exportadas a iOS.
 - **Biblioteca:** estantes, filtros, orden y búsqueda en `shared/library/Browse.kt` (portado de `lib/shelves.ts`).
+  Errores explicados: `shared/library/Failure.kt` (`classifyFailure`, portado de `lib/errors.ts`). Historial de
+  enlaces: tabla `history` (Room v5) que mantiene `JobRepository`; sobrevive al borrar el video.
   Room en v2 (AutoMigration 1→2). UI Android con la paleta de la web (`ui/theme`), tema claro/oscuro/sistema.
 - **ViewModels nunca reciben `Context`**: lo que lo necesita (ExoPlayer, WorkManager) se crea en un módulo Hilt
   y el VM recibe una interfaz (`Player`, `DownloadQueue`). Textos de UI en `strings.xml`.

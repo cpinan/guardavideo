@@ -9,6 +9,7 @@ import androidx.core.app.NotificationCompat
 import com.carlospinan.guardavideo.app.MainActivity
 import com.carlospinan.guardavideo.app.R
 import com.carlospinan.guardavideo.library.Job
+import com.carlospinan.guardavideo.library.classifyFailure
 
 object Notifications {
     const val CHANNEL_PROGRESS = "downloads"
@@ -42,8 +43,12 @@ object Notifications {
 
     fun finished(context: Context, job: Job, ok: Boolean) = NotificationCompat.Builder(context, CHANNEL_DONE)
         .setSmallIcon(R.drawable.ic_stat_download)
-        .setContentTitle(if (ok) "Video listo" else "No se pudo descargar")
-        .setContentText(if (ok) job.displayTitle else job.error ?: job.displayTitle)
+        .setContentTitle(if (ok) "Video listo" else "No se pudo descargar: ${classifyFailure(job.error).title.lowercase()}")
+        .setContentText(job.displayTitle)
+        .setStyle(
+            if (ok) null else NotificationCompat.BigTextStyle()
+                .bigText("${job.displayTitle}\n${classifyFailure(job.error).explanation.ifBlank { job.error.orEmpty() }}"),
+        )
         .setAutoCancel(true)
         .setContentIntent(openApp(context))
         .build()
