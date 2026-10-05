@@ -1,4 +1,4 @@
-.PHONY: install dev-api dev-api-debug dev-web share serve tailscale-serve ui-audit android-check android-install ios-build lint typecheck test test-fast check fmt clean
+.PHONY: install dev-api dev-api-debug dev-web share serve tailscale-serve ui-audit android-check android-install android-release ios-build lint typecheck test test-fast check fmt clean
 
 install:  ## Instala dependencias de backend y frontend
 	cd backend && pip install -e ".[dev]"
@@ -51,6 +51,9 @@ android-check:  ## App Android: tests del módulo compartido (KMP) + tests de la
 
 android-install:  ## Compila e instala la app Android en el emulador/dispositivo ($$ANDROID_SERIAL)
 	android/tools/dev.sh install
+
+android-release:  ## App Android optimizada (R8, ~60 MB) instalada sobre la de depuración sin perder la biblioteca
+	android/tools/dev.sh release
 
 ios-build:  ## App iOS: genera el proyecto (XcodeGen) y compila para el simulador (incluye el framework KMP)
 	cd ios && xcodegen -q && xcodebuild -project Guardavideo.xcodeproj -scheme Guardavideo -sdk iphonesimulator \

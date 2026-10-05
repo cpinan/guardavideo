@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Drive the app on a device/emulator without retyping the adb preamble.
 #   tools/dev.sh install            build debug + install
+#   tools/dev.sh release            build release (R8, ~60 MB, fast) + install over debug, keeping data
 #   tools/dev.sh share URL          open the app as if URL was shared from another app
 #   tools/dev.sh shot OUT.png       screenshot, downscaled to 1000px (cheap to read)
 #   tools/dev.sh tap X Y | swipe X1 Y1 X2 Y2 | text "abc" | key BACK
@@ -19,6 +20,9 @@ case "${1:-}" in
     (cd "$ROOT" && ./gradlew -q :androidApp:assembleDebug)
     adb install -r "$ROOT/androidApp/build/outputs/apk/debug/androidApp-debug.apk" | tail -1
     adb shell pm grant "$APP" android.permission.POST_NOTIFICATIONS 2>/dev/null || true ;;
+  release)  # optimized (R8) build, same signing key: installs over a debug build keeping the library
+    (cd "$ROOT" && ./gradlew -q :androidApp:assembleRelease)
+    adb install -r "$ROOT/androidApp/build/outputs/apk/release/androidApp-release.apk" | tail -1 ;;
   share)
     adb shell am start -a android.intent.action.SEND -t text/plain \
       --es android.intent.extra.TEXT "'$2'" -n "$APP/$APP.app.MainActivity" | tail -1 ;;

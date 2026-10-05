@@ -29,6 +29,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Personal sideload app: sign with the local debug key so an optimized build installs
+            // over the debug one without losing the library (a new key would force a reinstall).
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     buildFeatures { compose = true }

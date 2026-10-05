@@ -3,7 +3,7 @@
 _Last updated: 2026-10-04 · branch `main` · 0 uncommitted files_
 
 ## Next action
-User tests v0.3.0 on the Pixel (installed 2026-10-05): web-style library (shelves, filters, day carousels, dark mode), a Dailymotion link via Share → Guardavideo, player resume/PiP, "Guardar en la galería".
+User tests the optimized v0.3.0 release build on the Pixel (installed 2026-10-05 with `make android-release`): web-style library, Dailymotion via Share → Guardavideo, resume/PiP, "Guardar en la galería".
 
 ## State
 - Web + API (Mac): HLS + yt-dlp downloads, SQLite library, shelves, mobile UI, `make serve` (production on 127.0.0.1:8080, debug off) + `make tailscale-serve` for private sharing. Repo `github.com/cpinan/guardavideo` (private); CI runs `check` (web) and `android` jobs, both green.
@@ -17,6 +17,7 @@ Nothing in flight; all committed and pushed. Production server (`make serve`) ma
 ## Verify
 ```bash
 tools/verify.sh        # make check (141 backend + 294 web tests, lint, types, build) + make android-check (36 shared + 6 app tests, debug APK)
+make android-release   # optimized build (R8, ~60 MB, ~4 s cold start vs ~14 s debug) over the debug one, keeps data
 make ios-build         # XcodeGen + xcodebuild for the simulator (builds the Kotlin framework)
 make ui-audit          # web layout audit (needs dev-api + dev-web)
 ```
@@ -29,6 +30,7 @@ Device: `android/tools/dev.sh install|share URL|shot|ui|tap|files` (set `ANDROID
 
 ## Do not redo
 - ViewModels never receive `Context` (user rule): build context-needing objects in Hilt modules (`PlayerModule` gives `Player`), inject interfaces (`DownloadQueue`, `VideoExporter`).
+- Release builds are signed with the local debug key on purpose (personal sideload): a different key would force uninstalling and lose the phone's library. youtubedl-android ships no R8 rules: `proguard-rules.pro` keeps `com.yausername.**`, Jackson and commons-compress.
 - Dailymotion's CDN returns 403 (E005) to plain HTTP clients, even with honest browser headers; only yt-dlp's own workaround gets through. Use embedded yt-dlp, not a hand-written Kotlin extractor.
 - yt-dlp defaults to one HLS fragment at a time (~70 KB/s on Dailymotion); keep `--concurrent-fragments 8`.
 - AVPlayer does not play a local `.m3u8` from a file URL (stays `.unknown`, no error) and `AVAssetResourceLoader` cannot serve HLS media segments: use the loopback server.

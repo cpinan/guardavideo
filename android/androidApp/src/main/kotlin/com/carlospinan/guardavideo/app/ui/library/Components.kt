@@ -145,7 +145,7 @@ fun Thumb(job: Job, modifier: Modifier = Modifier, showCheck: Boolean = false, o
                 model = ImageRequest.Builder(context)
                     .data(File(job.filePath!!))
                     .decoderFactory(VideoFrameDecoder.Factory())
-                    .videoFrameMillis(2_000)
+                    .videoFrameMillis(thumbnailFrameMs(job.durationMs))
                     .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
@@ -186,6 +186,9 @@ fun Thumb(job: Job, modifier: Modifier = Modifier, showCheck: Boolean = false, o
         overlay()
     }
 }
+
+/** 10% into the video (1–30 s): the first seconds are often a black intro or a logo. */
+internal fun thumbnailFrameMs(durationMs: Long?): Long = ((durationMs ?: 20_000L) / 10).coerceIn(1_000L, 30_000L)
 
 @Composable
 fun ProgressRing(percent: Float, indeterminate: Boolean, modifier: Modifier = Modifier) {
