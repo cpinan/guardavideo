@@ -64,8 +64,6 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlospinan.guardavideo.app.R
-import com.carlospinan.guardavideo.library.sourceMessage
-import com.carlospinan.guardavideo.source.LinkSource
 import kotlinx.coroutines.launch
 
 private val QUALITIES = listOf<Int?>(null, 1080, 720, 480)
@@ -127,7 +125,8 @@ fun LibraryScreen(
                     onUrlChange = viewModel::onUrlChange,
                     quality = viewModel.quality,
                     onQualityChange = viewModel::onQualityChange,
-                    source = viewModel.source,
+                    canSubmit = viewModel.canSubmit,
+                    linkMessage = viewModel.linkMessage,
                     submitting = viewModel.submitting,
                     onSubmit = submit,
                 )
@@ -159,14 +158,15 @@ private fun DownloadForm(
     onUrlChange: (String) -> Unit,
     quality: Int?,
     onQualityChange: (Int?) -> Unit,
-    source: LinkSource,
+    canSubmit: Boolean,
+    linkMessage: String,
     submitting: Boolean,
     onSubmit: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val showHint = url.isNotBlank()
-    val problem = showHint && !source.canDownload
+    val problem = showHint && !canSubmit
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedTextField(
             value = url,
@@ -178,7 +178,7 @@ private fun DownloadForm(
             supportingText = if (showHint) {
                 {
                     Text(
-                        sourceMessage(source),
+                        linkMessage,
                         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                     )
                 }
@@ -197,7 +197,7 @@ private fun DownloadForm(
         )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             QualityPicker(quality, onQualityChange, Modifier.weight(1f))
-            Button(onClick = onSubmit, enabled = source.canDownload && !submitting, modifier = Modifier.weight(1f)) {
+            Button(onClick = onSubmit, enabled = canSubmit && !submitting, modifier = Modifier.weight(1f)) {
                 Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                 Text(stringResource(R.string.download), modifier = Modifier.padding(start = 8.dp))
             }

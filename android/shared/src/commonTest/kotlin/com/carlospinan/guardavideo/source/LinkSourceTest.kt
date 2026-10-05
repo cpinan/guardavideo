@@ -17,15 +17,15 @@ class LinkSourceTest {
 
     @Test
     fun sitePagesNeedTheServerAndDrmIsNeverDownloadable() {
-        assertEquals(LinkSource.SitePage("YouTube"), detectSource("https://m.youtube.com/watch?v=1"))
-        assertEquals(LinkSource.SitePage("Instagram"), detectSource("https://www.instagram.com/p/1"))
+        assertEquals(LinkSource.SitePage("YouTube", "https://m.youtube.com/watch?v=1"), detectSource("https://m.youtube.com/watch?v=1"))
+        assertEquals("Instagram", (detectSource("https://www.instagram.com/p/1") as LinkSource.SitePage).provider)
         assertEquals(LinkSource.Drm("Netflix"), detectSource("https://www.netflix.com/watch/1"))
         assertFalse(detectSource("https://youtu.be/abc").canDownload)
     }
 
     @Test
     fun unknownPagesAndInvalidInput() {
-        assertEquals(LinkSource.UnknownPage("notyoutube.com"), detectSource("https://www.notyoutube.com/v"))
+        assertEquals(LinkSource.UnknownPage("notyoutube.com", "https://www.notyoutube.com/v"), detectSource("https://www.notyoutube.com/v"))
         assertEquals(LinkSource.Invalid, detectSource("youtube.com"))
         assertEquals(LinkSource.Invalid, detectSource("ftp://x.com/a.mp4"))
         assertEquals(LinkSource.Invalid, detectSource("javascript:alert(1)"))

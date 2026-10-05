@@ -20,14 +20,14 @@ sealed interface LinkSource {
     /** Direct video file: downloaded as is. */
     data class DirectFile(val url: String, val extension: String) : LinkSource
 
-    /** A known site's page: needs yt-dlp, which only runs on the server. */
-    data class SitePage(val provider: String) : LinkSource
+    /** A known site's page: needs a site downloader (yt-dlp), available on Android only. */
+    data class SitePage(val provider: String, val url: String = "") : LinkSource
 
     /** DRM-protected service: never downloadable (the project does not bypass DRM). */
     data class Drm(val provider: String) : LinkSource
 
-    /** Some other web page: no direct media to download. */
-    data class UnknownPage(val host: String) : LinkSource
+    /** Some other web page: no direct media; yt-dlp's generic extractor may still find some. */
+    data class UnknownPage(val host: String, val url: String = "") : LinkSource
 
     val canDownload: Boolean get() = this is Hls || this is DirectFile
 }
@@ -44,9 +44,9 @@ fun detectSource(raw: String): LinkSource {
 
     val provider = findProvider(url.host)
     return when {
-        provider == null -> LinkSource.UnknownPage(url.host.removePrefix("www."))
+        provider == null -> LinkSource.UnknownPage(url.host.removePrefix("www."), url.toString())
         provider.access == Access.Drm -> LinkSource.Drm(provider.name)
-        else -> LinkSource.SitePage(provider.name)
+        else -> LinkSource.SitePage(provider.name, url.toString())
     }
 }
 

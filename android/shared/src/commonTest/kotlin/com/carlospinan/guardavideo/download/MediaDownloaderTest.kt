@@ -194,7 +194,7 @@ class MediaDownloaderTest {
     @Test
     fun pageLinksAreNotDownloadedOnThePhone() = runTest {
         val dl = downloader { respond("") }
-        assertFailsWith<DownloadException> { dl.download(LinkSource.SitePage("YouTube"), "j10", DIR) }
+        assertFailsWith<DownloadException> { dl.download(LinkSource.SitePage("YouTube", "https://youtube.com/watch?v=1"), "j10", DIR) }
         assertTrue(requests.isEmpty())
     }
 

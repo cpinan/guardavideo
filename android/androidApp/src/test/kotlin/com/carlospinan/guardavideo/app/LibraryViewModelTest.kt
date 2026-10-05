@@ -2,6 +2,7 @@ package com.carlospinan.guardavideo.app
 
 import com.carlospinan.guardavideo.app.download.DownloadQueue
 import com.carlospinan.guardavideo.app.media.VideoExporter
+import com.carlospinan.guardavideo.download.LinkPolicy
 import com.carlospinan.guardavideo.library.Job
 import com.carlospinan.guardavideo.app.ui.library.LibraryViewModel
 import com.carlospinan.guardavideo.app.ui.library.UiMessage
@@ -40,13 +41,13 @@ class LibraryViewModelTest {
         override suspend fun exportToGallery(job: Job): Boolean { exported += job.id; return ok }
     }
     private var ids = 0
-    private val repo = JobRepository(FakeJobDao(), FakeFileSystem(), clock = { 1 }, newId = { "id${++ids}" })
+    private val repo = JobRepository(FakeJobDao(), FakeFileSystem(), clock = { 1 }, newId = { "id${++ids}" }, sitePages = true)
     private lateinit var vm: LibraryViewModel
 
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        vm = LibraryViewModel(repo, queue, exporter)
+        vm = LibraryViewModel(repo, queue, exporter, LinkPolicy(sitePages = true))
     }
 
     @AfterTest
@@ -72,11 +73,17 @@ class LibraryViewModelTest {
     }
 
     @Test
-    fun pageLinksCannotBeSubmitted() = runTest {
-        vm.onUrlChange("https://www.youtube.com/watch?v=1")
-        assertTrue(!vm.source.canDownload)
+    fun siteLinksAreQueuedForYtDlpButDrmIsNot() = runTest {
+        vm.onUrlChange("https://www.dailymotion.com/video/x4at2w3")
+        assertTrue(vm.canSubmit)
+        assertEquals("Dailymotion · se descargará con yt-dlp", vm.linkMessage)
         vm.submit()
-        assertTrue(queue.enqueued.isEmpty())
+        assertEquals(listOf("id1"), queue.enqueued)
+
+        vm.onUrlChange("https://www.netflix.com/watch/1")
+        assertTrue(!vm.canSubmit)
+        vm.submit()
+        assertEquals(1, queue.enqueued.size)
     }
 
     @Test

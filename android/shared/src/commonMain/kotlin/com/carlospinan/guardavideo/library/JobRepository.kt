@@ -28,6 +28,8 @@ class JobRepository(
     private val fs: FileSystem,
     private val clock: () -> Long,
     private val newId: () -> String,
+    /** True where a site downloader (yt-dlp) exists: Android yes, iOS no. */
+    private val sitePages: Boolean = false,
 ) {
     private val mutex = Mutex()
 
@@ -42,7 +44,7 @@ class JobRepository(
     suspend fun create(rawUrl: String, quality: Int?): CreateResult = mutex.withLock {
         val url = rawUrl.trim()
         val source = detectSource(url)
-        if (!source.canDownload) return CreateResult.Rejected(sourceMessage(source))
+        if (!canDownload(source, sitePages)) return CreateResult.Rejected(sourceMessage(source, sitePages))
         val existing = dao.all().map { it.toJob() }.firstOrNull { job ->
             job.url == url && job.quality == quality && (job.status.isActive || hasFile(job))
         }
@@ -111,8 +113,24 @@ class JobRepository(
     }
 }
 
+/**
+ * Whether this device can download [source]. Direct media always; site pages (and unknown pages,
+ * which yt-dlp's generic extractor may still handle) only with a site downloader; DRM never.
+ */
+fun canDownload(source: LinkSource, sitePages: Boolean): Boolean = when (source) {
+    is LinkSource.Hls, is LinkSource.DirectFile -> true
+    is LinkSource.SitePage, is LinkSource.UnknownPage -> sitePages
+    LinkSource.Invalid, is LinkSource.Drm -> false
+}
+
 /** What the URL field shows for a link, in the UI's language. */
-fun sourceMessage(source: LinkSource): String = when (source) {
+fun sourceMessage(source: LinkSource, sitePages: Boolean = false): String = when {
+    sitePages && source is LinkSource.SitePage -> "${source.provider} · se descargará con yt-dlp"
+    sitePages && source is LinkSource.UnknownPage -> "${source.host} · se intentará con yt-dlp"
+    else -> directMessage(source)
+}
+
+private fun directMessage(source: LinkSource): String = when (source) {
     LinkSource.Invalid -> "Ingresa una URL http(s) válida"
     is LinkSource.Hls -> "Stream HLS directo"
     is LinkSource.DirectFile -> "Archivo de video (.${source.extension})"

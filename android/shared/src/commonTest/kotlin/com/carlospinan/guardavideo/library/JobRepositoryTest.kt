@@ -1,5 +1,6 @@
 package com.carlospinan.guardavideo.library
 
+import com.carlospinan.guardavideo.source.detectSource
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import okio.Path.Companion.toPath
@@ -21,6 +22,16 @@ class JobRepositoryTest {
         val job = assertIs<CreateResult.Created>(repo.create(url, null)).job
         fs.write(file.toPath()) { writeUtf8("video") }
         return repo.update(job.id) { it.copy(status = JobStatus.Done, filePath = file) }!!
+    }
+
+    @Test
+    fun withSiteSupportPageLinksAreQueuedButDrmNever() = runTest {
+        val android = JobRepository(FakeJobDao(), fs, clock = { 1 }, newId = { "s1" }, sitePages = true)
+        assertIs<CreateResult.Created>(android.create("https://www.dailymotion.com/video/x4at2w3", null))
+        assertIs<CreateResult.Rejected>(android.create("https://www.netflix.com/watch/1", null))
+        assertEquals("Dailymotion · se descargará con yt-dlp", sourceMessage(detectSource("https://dailymotion.com/video/x1"), sitePages = true))
+        assertEquals(true, canDownload(detectSource("https://example.org/page"), sitePages = true))
+        assertEquals(false, canDownload(detectSource("https://example.org/page"), sitePages = false))
     }
 
     @Test

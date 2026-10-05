@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.carlospinan.guardavideo.app.R
 import com.carlospinan.guardavideo.app.download.DownloadQueue
 import com.carlospinan.guardavideo.app.media.VideoExporter
+import com.carlospinan.guardavideo.download.LinkPolicy
 import com.carlospinan.guardavideo.library.CreateResult
 import com.carlospinan.guardavideo.library.Job
 import com.carlospinan.guardavideo.library.JobRepository
@@ -35,6 +36,7 @@ class LibraryViewModel @Inject constructor(
     private val repository: JobRepository,
     private val queue: DownloadQueue,
     private val exporter: VideoExporter,
+    private val policy: LinkPolicy,
 ) : ViewModel() {
 
     /** Server state: the library, straight from the database (single source of truth). */
@@ -51,6 +53,10 @@ class LibraryViewModel @Inject constructor(
 
     val source: LinkSource get() = detectSource(url)
 
+    /** Whether this device can download the current link, and the hint shown under the field. */
+    val canSubmit: Boolean get() = policy.canDownload(source)
+    val linkMessage: String get() = policy.message(source)
+
     private val _messages = Channel<UiMessage>(Channel.BUFFERED)
     val messages: Flow<UiMessage> = _messages.receiveAsFlow()
 
@@ -63,7 +69,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun submit() {
-        if (submitting || !source.canDownload) return
+        if (submitting || !canSubmit) return
         submitting = true
         viewModelScope.launch {
             try {

@@ -15,9 +15,14 @@ android {
         applicationId = "com.carlospinan.guardavideo"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
+        // yt-dlp ships a Python runtime per ABI: arm64 covers current phones and Apple-silicon emulators.
+        ndk { abiFilters += "arm64-v8a" }
     }
+
+    // youtubedl-android runs Python/ffmpeg as executables from the extracted native-lib folder.
+    packaging { jniLibs { useLegacyPackaging = true } }
 
     buildTypes {
         release {
@@ -61,6 +66,8 @@ dependencies {
     implementation(libs.media3.transformer)
     implementation(libs.coil.compose)
     implementation(libs.coil.video)
+    implementation(libs.youtubedl.android)
+    implementation(libs.youtubedl.ffmpeg)
 
     testImplementation(libs.kotlin.test.junit)
     testImplementation(libs.kotlinx.coroutines.test)

@@ -3,7 +3,7 @@
     <string name="app_name">Guardavideo</string>
 
     <string name="url_label">URL del video</string>
-    <string name="url_placeholder">Enlace .m3u8 o .mp4</string>
+    <string name="url_placeholder">Dailymotion, YouTube, .m3u8 o .mp4</string>
     <string name="paste">Pegar</string>
     <string name="quality_label">Calidad</string>
     <string name="quality_best">Mejor</string>
@@ -16,7 +16,7 @@
     <string name="download_started">Descarga en cola</string>
 
     <string name="empty_title">Aún no hay videos</string>
-    <string name="empty_body">Pega un enlace directo a un video (.m3u8 o .mp4), o compártelo desde el navegador con «Compartir → Guardavideo».</string>
+    <string name="empty_body">Pega el enlace de un video (Dailymotion, YouTube… o un .m3u8/.mp4 directo), o compártelo desde otra app con «Compartir → Guardavideo».</string>
 
     <string name="status_queued">En cola</string>
     <string name="status_running">Descargando</string>

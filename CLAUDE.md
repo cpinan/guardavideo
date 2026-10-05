@@ -13,8 +13,9 @@ API FastAPI + frontend React/TS para descargar videos con progreso en vivo (SSE)
 - Requiere `ffmpeg` en el PATH. Para probar con streams en localhost: `HLSWEB_ALLOW_PRIVATE_URLS=true` (solo dev).
 
 ## App Android (`android/`)
-Proyecto Gradle propio (AGP 9.3.1, Kotlin 2.4.10). Descarga **en el teléfono**, sin servidor: solo enlaces
-directos (.m3u8 / .mp4); los enlaces de páginas (YouTube…) necesitan yt-dlp y no funcionan ahí.
+Proyecto Gradle propio (AGP 9.3.1, Kotlin 2.4.10). Descarga **en el teléfono**, sin servidor. Enlaces directos
+(.m3u8 / .mp4) con el descargador propio; páginas de sitios (Dailymotion, YouTube…) con yt-dlp embebido
+(`youtubedl-android`: Python + yt-dlp + ffmpeg, se autoactualiza 1×/día). DRM nunca. iOS: solo enlaces directos.
 - `:shared` (KMP Android + iOS): `source/` detección de enlaces, `hls/` parser, `download/MediaDownloader`
   (Ktor + Okio), `library/` Room KMP + `JobRepository` + `DownloadRunner`. Tests en `commonTest` (MockEngine +
   FakeFileSystem): `./gradlew :shared:testAndroidHostTest` (sin `withHostTest {}` no corren).

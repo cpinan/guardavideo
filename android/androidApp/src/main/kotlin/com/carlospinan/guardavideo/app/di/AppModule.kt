@@ -2,7 +2,10 @@ package com.carlospinan.guardavideo.app.di
 
 import android.content.Context
 import android.os.Environment
+import com.carlospinan.guardavideo.app.media.YtDlpSiteDownloader
+import com.carlospinan.guardavideo.download.LinkPolicy
 import com.carlospinan.guardavideo.download.MediaDownloader
+import com.carlospinan.guardavideo.download.RoutingDownloader
 import com.carlospinan.guardavideo.download.VideoDownloader
 import com.carlospinan.guardavideo.library.AppDatabase
 import com.carlospinan.guardavideo.library.DownloadRunner
@@ -84,8 +87,12 @@ object AppModule {
     }
 
     @Provides @Singleton
-    fun downloader(http: HttpClient, fs: FileSystem): VideoDownloader =
-        MediaDownloader(http, fs, io = Dispatchers.IO)
+    fun downloader(http: HttpClient, fs: FileSystem, sites: YtDlpSiteDownloader): VideoDownloader =
+        RoutingDownloader(direct = MediaDownloader(http, fs, io = Dispatchers.IO), site = sites)
+
+    /** Android has yt-dlp, so site pages are downloadable here (DRM never is). */
+    @Provides
+    fun linkPolicy(): LinkPolicy = LinkPolicy(sitePages = true)
 
     @Provides @Singleton
     fun repository(db: AppDatabase, fs: FileSystem): JobRepository =
@@ -94,6 +101,7 @@ object AppModule {
             fs,
             clock = System::currentTimeMillis,
             newId = { UUID.randomUUID().toString().replace("-", "").take(12) },
+            sitePages = true,
         )
 
     @Provides @Singleton
