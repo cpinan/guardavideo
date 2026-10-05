@@ -43,5 +43,5 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       # The runner image ships an Android SDK with accepted licenses; AGP downloads the
       # compileSdk platform it is missing. iOS targets are skipped on Linux.
-      - name: Tests (shared KMP + app) and debug APK
-        run: ./gradlew --console=plain :shared:testAndroidHostTest :androidApp:testDebugUnitTest :androidApp:assembleDebug
+      - name: Tests (shared KMP + both app flavors) and debug APKs
+        run: ./gradlew --console=plain :shared:testAndroidHostTest :androidApp:testFullDebugUnitTest :androidApp:testPlayDebugUnitTest :androidApp:assembleFullDebug :androidApp:assemblePlayDebug

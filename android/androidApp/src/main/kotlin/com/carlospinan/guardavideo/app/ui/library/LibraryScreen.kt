@@ -177,7 +177,7 @@ fun LibraryScreen(
                         linkMessage = viewModel.linkMessage,
                         submitting = viewModel.submitting,
                         onSubmit = submit,
-                        onProviders = onProviders,
+                        onProviders = onProviders.takeIf { viewModel.supportsSites },
                     )
                 }
                 if (state.videos > 0 && !viewModel.searchOpen) {
@@ -386,7 +386,7 @@ private fun DownloadForm(
     linkMessage: String,
     submitting: Boolean,
     onSubmit: () -> Unit,
-    onProviders: () -> Unit,
+    onProviders: (() -> Unit)?,
 ) {
     val context = LocalContext.current
     val brand = LocalBrand.current
@@ -419,8 +419,10 @@ private fun DownloadForm(
                 modifier = Modifier.fillMaxWidth(),
                 icon = { Icon(Icons.Rounded.Download, contentDescription = null, tint = if (canSubmit) Color.White else brand.muted, modifier = Modifier.size(20.dp)) },
             )
-            TextButton(onClick = onProviders, modifier = Modifier.align(Alignment.CenterHorizontally)) {
-                Text(stringResource(R.string.providers_link), color = brand.accent, fontSize = 13.sp)
+            if (onProviders != null) { // no site list in the Play flavor
+                TextButton(onClick = onProviders, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                    Text(stringResource(R.string.providers_link), color = brand.accent, fontSize = 13.sp)
+                }
             }
         }
     }

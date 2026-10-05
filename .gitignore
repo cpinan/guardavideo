@@ -27,3 +27,6 @@ graphify-out/
 *.db-shm
 *.db-wal
 ui-audit-out/
+android/keystore.properties
+*.jks
+*.keystore

@@ -116,6 +116,9 @@ class LibraryViewModel @Inject constructor(
 
     val source: LinkSource get() = detectSource(url)
     val canSubmit: Boolean get() = policy.canDownload(source)
+
+    /** Full flavor downloads site pages (and lists them); the Play flavor only direct links. */
+    val supportsSites: Boolean get() = policy.sitePages
     val linkMessage: String get() = policy.message(source)
 
     private val _messages = Channel<UiMessage>(Channel.BUFFERED)

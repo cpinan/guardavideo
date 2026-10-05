@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Play flavor: direct links only, so the wording never promises site downloads. -->
+<resources>
+    <string name="url_placeholder">Enlace directo a un video (.m3u8 o .mp4)</string>
+    <string name="empty_body">Pega un enlace directo a un video (.m3u8 o .mp4): por ejemplo de tu servidor multimedia, tu nube o un archivo de video público. También puedes compartirlo desde otra app con «Compartir → Guardavideo».</string>
+</resources>

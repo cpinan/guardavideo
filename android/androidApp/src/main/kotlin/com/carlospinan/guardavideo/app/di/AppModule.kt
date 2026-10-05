@@ -2,7 +2,7 @@ package com.carlospinan.guardavideo.app.di
 
 import android.content.Context
 import android.os.Environment
-import com.carlospinan.guardavideo.app.media.YtDlpSiteDownloader
+import com.carlospinan.guardavideo.app.media.SiteSupport
 import com.carlospinan.guardavideo.download.LinkPolicy
 import com.carlospinan.guardavideo.download.MediaDownloader
 import com.carlospinan.guardavideo.download.RoutingDownloader
@@ -105,22 +105,22 @@ object AppModule {
     }
 
     @Provides @Singleton
-    fun downloader(http: HttpClient, fs: FileSystem, sites: YtDlpSiteDownloader): VideoDownloader =
-        RoutingDownloader(direct = MediaDownloader(http, fs, io = Dispatchers.IO), site = sites)
+    fun downloader(http: HttpClient, fs: FileSystem, sites: SiteSupport): VideoDownloader =
+        RoutingDownloader(direct = MediaDownloader(http, fs, io = Dispatchers.IO), site = sites.downloader)
 
-    /** Android has yt-dlp, so site pages are downloadable here (DRM never is). */
+    /** Site pages only where this flavor has a site downloader (full: yes, play: no). DRM never. */
     @Provides
-    fun linkPolicy(): LinkPolicy = LinkPolicy(sitePages = true)
+    fun linkPolicy(sites: SiteSupport): LinkPolicy = LinkPolicy(sitePages = sites.downloader != null)
 
     @Provides @Singleton
-    fun repository(db: AppDatabase, fs: FileSystem): JobRepository =
+    fun repository(db: AppDatabase, fs: FileSystem, sites: SiteSupport): JobRepository =
         JobRepository(
             db.jobs(),
             fs,
             db.history(),
             clock = System::currentTimeMillis,
             newId = { UUID.randomUUID().toString().replace("-", "").take(12) },
-            sitePages = true,
+            sitePages = sites.downloader != null,
         )
 
     @Provides @Singleton

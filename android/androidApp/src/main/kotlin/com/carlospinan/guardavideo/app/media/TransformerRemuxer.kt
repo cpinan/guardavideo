@@ -27,12 +27,12 @@ import kotlin.coroutines.resumeWithException
  * - MPEG-TS (.ts): MP4 seeks precisely and galleries understand it; TS often does neither.
  * - Fragmented MP4 (moof boxes, e.g. Dailymotion via yt-dlp): readers see only the first
  *   fragment (a 73-minute video reads as 7:30, no thumbnail). Transformer cannot rewrite those
- *   ("Unexpected duration change"), so they go through the bundled ffmpeg ([FfmpegFaststart]).
+ *   ("Unexpected duration change"), so they go through [FragmentedMp4Fixer] (the bundled ffmpeg in the full flavor).
  */
 class TransformerRemuxer @Inject constructor(
     @ApplicationContext private val context: Context,
     private val fs: FileSystem,
-    private val ffmpeg: FfmpegFaststart,
+    private val fragmentedFixer: FragmentedMp4Fixer,
 ) : MediaPostProcessor {
 
     override suspend fun process(result: DownloadResult): Path {
@@ -45,7 +45,7 @@ class TransformerRemuxer @Inject constructor(
         try {
             if (ts) {
                 remux(File(file.toString()), File(tmp.toString()))
-            } else if (!ffmpeg.copy(File(file.toString()), File(tmp.toString()))) {
+            } else if (!fragmentedFixer.fix(File(file.toString()), File(tmp.toString()))) {
                 return file // keep the download as it is; the repair retries on the next start
             }
             fs.atomicMove(tmp, out) // for a fragmented .mp4 this replaces it in place

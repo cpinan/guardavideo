@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Full (sideload) flavor: different name so both apps can be told apart on one phone. -->
+<resources>
+    <string name="app_name">Guardavideo+</string>
+</resources>

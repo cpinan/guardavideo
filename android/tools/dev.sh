@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Drive the app on a device/emulator without retyping the adb preamble.
 #   tools/dev.sh install            build debug + install
-#   tools/dev.sh release            build release (R8, ~60 MB, fast) + install over debug, keeping data
+#   tools/dev.sh release            full flavor release (R8, ~60 MB) + install over debug, keeping data
+#   tools/dev.sh play               Play flavor debug (direct links only; separate app id)
 #   tools/dev.sh share URL          open the app as if URL was shared from another app
 #   tools/dev.sh shot OUT.png       screenshot, downscaled to 1000px (cheap to read)
 #   tools/dev.sh tap X Y | swipe X1 Y1 X2 Y2 | text "abc" | key BACK
@@ -16,13 +17,17 @@ APP=com.carlospinan.guardavideo
 adb() { "$ADB" -s "$SERIAL" "$@"; }
 
 case "${1:-}" in
-  install)
-    (cd "$ROOT" && ./gradlew -q :androidApp:assembleDebug)
-    adb install -r "$ROOT/androidApp/build/outputs/apk/debug/androidApp-debug.apk" | tail -1
+  install)  # full flavor (sideload, with yt-dlp), debug
+    (cd "$ROOT" && ./gradlew -q :androidApp:assembleFullDebug)
+    adb install -r "$ROOT/androidApp/build/outputs/apk/full/debug/androidApp-full-debug.apk" | tail -1
     adb shell pm grant "$APP" android.permission.POST_NOTIFICATIONS 2>/dev/null || true ;;
-  release)  # optimized (R8) build, same signing key: installs over a debug build keeping the library
-    (cd "$ROOT" && ./gradlew -q :androidApp:assembleRelease)
-    adb install -r "$ROOT/androidApp/build/outputs/apk/release/androidApp-release.apk" | tail -1 ;;
+  release)  # full flavor, optimized (R8), same key: installs over the debug build keeping the library
+    (cd "$ROOT" && ./gradlew -q :androidApp:assembleFullRelease)
+    adb install -r "$ROOT/androidApp/build/outputs/apk/full/release/androidApp-full-release.apk" | tail -1 ;;
+  play)  # Play flavor (direct links only), debug: a separate app (com.carlospinan.guardavideo.play)
+    (cd "$ROOT" && ./gradlew -q :androidApp:assemblePlayDebug)
+    adb install -r "$ROOT/androidApp/build/outputs/apk/play/debug/androidApp-play-debug.apk" | tail -1
+    adb shell pm grant "$APP.play" android.permission.POST_NOTIFICATIONS 2>/dev/null || true ;;
   share)
     adb shell am start -a android.intent.action.SEND -t text/plain \
       --es android.intent.extra.TEXT "'$2'" -n "$APP/$APP.app.MainActivity" | tail -1 ;;

@@ -1,4 +1,4 @@
-.PHONY: install dev-api dev-api-debug dev-web share serve tailscale-serve ui-audit android-check android-install android-release ios-build lint typecheck test test-fast check fmt clean
+.PHONY: install dev-api dev-api-debug dev-web share serve tailscale-serve ui-audit android-check android-install android-release android-play-bundle ios-build lint typecheck test test-fast check fmt clean
 
 install:  ## Instala dependencias de backend y frontend
 	cd backend && pip install -e ".[dev]"
@@ -46,11 +46,18 @@ tailscale-serve:  ## HTTPS solo dentro de tu tailnet hacia :8080 (Tailscale con 
 	tailscale serve --bg 8080
 	tailscale serve status
 
-android-check:  ## App Android: tests del módulo compartido (KMP) + tests de la app + APK debug
-	cd android && ./gradlew --console=plain -q :shared:testAndroidHostTest :androidApp:testDebugUnitTest :androidApp:assembleDebug
+android-check:  ## App Android: tests KMP + tests y APK debug de los dos sabores (full y play)
+	cd android && ./gradlew --console=plain -q :shared:testAndroidHostTest :androidApp:testFullDebugUnitTest \
+		:androidApp:testPlayDebugUnitTest :androidApp:assembleFullDebug :androidApp:assemblePlayDebug
 
 android-install:  ## Compila e instala la app Android en el emulador/dispositivo ($$ANDROID_SERIAL)
 	android/tools/dev.sh install
+
+android-play-bundle:  ## Bundle para Google Play (sabor play) en android/release/play/<versionCode>-<versionName>-release.aab
+	cd android && ./gradlew --console=plain -q :androidApp:bundlePlayRelease
+	@V=$$(grep -E 'versionCode = |versionName = ' android/androidApp/build.gradle.kts | sed -E 's/.*= "?([^"]*)"?/\1/' | paste -sd- -); \
+		mkdir -p android/release/play && cp android/androidApp/build/outputs/bundle/playRelease/androidApp-play-release.aab android/release/play/$$V-release.aab && \
+		echo "android/release/play/$$V-release.aab"
 
 android-release:  ## App Android optimizada (R8, ~60 MB) instalada sobre la de depuración sin perder la biblioteca
 	android/tools/dev.sh release
