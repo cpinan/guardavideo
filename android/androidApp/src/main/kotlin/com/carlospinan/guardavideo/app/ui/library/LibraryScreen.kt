@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,72 +15,98 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.VideoLibrary
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.carlospinan.guardavideo.app.R
-import kotlinx.coroutines.launch
+import com.carlospinan.guardavideo.app.settings.ThemeMode
+import com.carlospinan.guardavideo.app.ui.formatBytes
+import com.carlospinan.guardavideo.app.ui.formatClock
+import com.carlospinan.guardavideo.app.ui.formatWhen
+import com.carlospinan.guardavideo.app.ui.theme.LocalBrand
+import com.carlospinan.guardavideo.library.Job
+import com.carlospinan.guardavideo.library.LibraryFilter
+import com.carlospinan.guardavideo.library.LibrarySort
+import com.carlospinan.guardavideo.source.LinkSource
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 private val QUALITIES = listOf<Int?>(null, 1080, 720, 480)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
     sharedUrl: String?,
     onSharedUrlConsumed: () -> Unit,
     onPlay: (String) -> Unit,
+    themeMode: ThemeMode,
+    onToggleTheme: () -> Unit,
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
-    val jobs by viewModel.jobs.collectAsStateWithLifecycle()
+    val brand = LocalBrand.current
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     LaunchedEffect(sharedUrl) {
         if (sharedUrl != null) {
@@ -109,44 +136,176 @@ fun LibraryScreen(
         viewModel.submit()
     }
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = { TopAppBar(title = { Text(stringResource(R.string.app_name)) }, scrollBehavior = scrollBehavior) },
-        snackbarHost = { SnackbarHost(snackbar) },
-    ) { padding ->
-        LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = padding.calculateTopPadding() + 8.dp, bottom = padding.calculateBottomPadding() + 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize(),
+    Scaffold(containerColor = brand.bg, snackbarHost = { SnackbarHost(snackbar) }) { padding ->
+        Box(
+            Modifier
+                .fillMaxSize()
+                // Soft accent glow at the top, like the web page background.
+                .background(Brush.verticalGradient(0f to brand.bgGlow, 0.35f to brand.bg)),
         ) {
-            item(key = "form") {
-                DownloadForm(
-                    url = viewModel.url,
-                    onUrlChange = viewModel::onUrlChange,
-                    quality = viewModel.quality,
-                    onQualityChange = viewModel::onQualityChange,
-                    canSubmit = viewModel.canSubmit,
-                    linkMessage = viewModel.linkMessage,
-                    submitting = viewModel.submitting,
-                    onSubmit = submit,
-                )
+            LazyColumn(
+                contentPadding = PaddingValues(top = padding.calculateTopPadding() + 12.dp, bottom = padding.calculateBottomPadding() + 32.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                item(key = "header") { Header(themeMode, onToggleTheme) }
+                item(key = "form") {
+                    DownloadForm(
+                        url = viewModel.url,
+                        onUrlChange = viewModel::onUrlChange,
+                        quality = viewModel.quality,
+                        onQualityChange = viewModel::onQualityChange,
+                        source = viewModel.source,
+                        canSubmit = viewModel.canSubmit,
+                        linkMessage = viewModel.linkMessage,
+                        submitting = viewModel.submitting,
+                        onSubmit = submit,
+                    )
+                }
+                if (state.videos > 0) {
+                    item(key = "summary") {
+                        Text(
+                            stringResource(R.string.summary, state.videos, formatBytes(context, state.bytes), formatBytes(context, state.freeBytes)),
+                            fontSize = 13.sp,
+                            color = brand.muted,
+                            modifier = Modifier.padding(horizontal = 20.dp),
+                        )
+                    }
+                }
+                if (state.loaded && state.total == 0) {
+                    item(key = "empty") { EmptyState(onExample = viewModel::useExample) }
+                } else if (state.total > 0) {
+                    libraryContent(state, viewModel, onPlay)
+                }
             }
-            val list = jobs
-            if (list != null && list.isEmpty()) {
-                item(key = "empty") { EmptyState() }
+        }
+    }
+}
+
+private fun LazyListScope.libraryContent(state: LibraryUiState, vm: LibraryViewModel, onPlay: (String) -> Unit) {
+    item(key = "heading") {
+        val brand = LocalBrand.current
+        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp)) {
+            Text(
+                stringResource(R.string.downloads),
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = brand.text,
+                modifier = Modifier.semantics { heading() },
+            )
+            Text(
+                if (state.active > 0) stringResource(R.string.counts_active_done, state.active, state.done) else stringResource(R.string.counts_done, state.done),
+                fontSize = 13.sp,
+                color = brand.muted,
+                modifier = Modifier.padding(start = 10.dp, bottom = 3.dp),
+            )
+        }
+    }
+    val shelves = state.shelves
+    shelf("continue", "▶", R.string.shelf_continue, shelves.continueWatching, onPlay, vm) { job ->
+        val total = job.durationMs?.let { " / ${formatClock(it)}" }.orEmpty()
+        stringResource(R.string.resume_at, formatClock(job.positionMs)) + total
+    }
+    shelf("favorites", "★", R.string.shelf_favorites, shelves.favorites, onPlay, vm) { job -> job.durationMs?.let { formatClock(it) }.orEmpty() }
+    shelf("views", "🔥", R.string.shelf_views, shelves.mostViewed, onPlay, vm) { job ->
+        if (job.viewCount == 1) stringResource(R.string.views_one) else stringResource(R.string.views_many, job.viewCount)
+    }
+    shelf("recent", "🕒", R.string.shelf_recent, shelves.recent, onPlay, vm) { job -> formatWhen(job.createdAt) }
+
+    item(key = "toolbar") { Toolbar(state, vm) }
+
+    if (state.noMatches) {
+        item(key = "nomatch") {
+            Text(stringResource(R.string.no_matches), color = LocalBrand.current.muted, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 20.dp))
+        }
+    }
+
+    for (group in state.groups) {
+        val key = group.day.toString()
+        item(key = "day-$key") { DayTitle(group.day) }
+        items(group.pending, key = { it.id }) { job ->
+            PendingCard(
+                job,
+                onCancel = { vm.cancel(job.id) },
+                onRetry = { vm.retry(job.id) },
+                onDelete = { vm.delete(job.id) },
+                modifier = Modifier.padding(horizontal = 16.dp).animateItem(),
+            )
+        }
+        if (group.finished.isNotEmpty()) {
+            item(key = "rail-$key") {
+                // Finished videos of the day: a swipeable carousel; the next card peeks in.
+                val width = (LocalConfiguration.current.screenWidthDp * 0.8f).coerceAtMost(340f).dp
+                LazyRow(contentPadding = CarouselPadding, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(group.finished, key = { it.id }) { job ->
+                        FinishedCard(
+                            job,
+                            onPlay = { onPlay(job.id) },
+                            onToggleStar = { vm.toggleStar(job) },
+                            onSaveToGallery = { vm.saveToGallery(job) },
+                            onDelete = { vm.delete(job.id) },
+                            modifier = Modifier.width(width),
+                        )
+                    }
+                }
             }
-            items(list.orEmpty(), key = { it.id }) { job ->
-                JobCard(
-                    job = job,
-                    onPlay = { onPlay(job.id) },
-                    onCancel = { viewModel.cancel(job.id) },
-                    onRetry = { viewModel.retry(job.id) },
-                    onDelete = { viewModel.delete(job.id) },
-                    onToggleStar = { viewModel.toggleStar(job) },
-                    onSaveToGallery = { viewModel.saveToGallery(job) },
-                    modifier = Modifier.animateItem(),
-                )
+        }
+    }
+    items(state.flat, key = { it.id }) { job ->
+        val modifier = Modifier.padding(horizontal = 16.dp).animateItem()
+        if (job.status == com.carlospinan.guardavideo.library.JobStatus.Done) {
+            FinishedCard(job, { onPlay(job.id) }, { vm.toggleStar(job) }, { vm.saveToGallery(job) }, { vm.delete(job.id) }, modifier.fillMaxWidth())
+        } else {
+            PendingCard(job, { vm.cancel(job.id) }, { vm.retry(job.id) }, { vm.delete(job.id) }, modifier)
+        }
+    }
+}
+
+private fun LazyListScope.shelf(
+    key: String,
+    icon: String,
+    title: Int,
+    jobs: List<Job>,
+    onPlay: (String) -> Unit,
+    vm: LibraryViewModel,
+    subline: @Composable (Job) -> String,
+) {
+    if (jobs.isEmpty()) return
+    item(key = "shelf-$key") {
+        val brand = LocalBrand.current
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                "$icon  ${stringResource(title)}",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = brand.text,
+                modifier = Modifier.padding(horizontal = 20.dp).semantics { heading() },
+            )
+            LazyRow(contentPadding = CarouselPadding, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(jobs, key = { "$key-${it.id}" }) { job ->
+                    ShelfCard(job, subline(job), onOpen = { onPlay(job.id) }, onToggleStar = { vm.toggleStar(job) })
+                }
             }
+        }
+    }
+}
+
+@Composable
+private fun Header(themeMode: ThemeMode, onToggleTheme: () -> Unit) {
+    val brand = LocalBrand.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(horizontal = 20.dp)) {
+        Logo()
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.app_name), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = brand.text, modifier = Modifier.semantics { heading() })
+            Text(stringResource(R.string.tagline), fontSize = 14.sp, color = brand.muted)
+        }
+        val (icon, label) = when (themeMode) {
+            ThemeMode.System -> Icons.Rounded.BrightnessAuto to R.string.theme_system
+            ThemeMode.Light -> Icons.Rounded.LightMode to R.string.theme_light
+            ThemeMode.Dark -> Icons.Rounded.DarkMode to R.string.theme_dark
+        }
+        BrandCard {
+            IconButton(onClick = onToggleTheme) { Icon(icon, contentDescription = stringResource(label), tint = brand.text) }
         }
     }
 }
@@ -158,51 +317,68 @@ private fun DownloadForm(
     onUrlChange: (String) -> Unit,
     quality: Int?,
     onQualityChange: (Int?) -> Unit,
+    source: LinkSource,
     canSubmit: Boolean,
     linkMessage: String,
     submitting: Boolean,
     onSubmit: () -> Unit,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val showHint = url.isNotBlank()
-    val problem = showHint && !canSubmit
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedTextField(
-            value = url,
-            onValueChange = onUrlChange,
-            label = { Text(stringResource(R.string.url_label)) },
-            placeholder = { Text(stringResource(R.string.url_placeholder)) },
-            singleLine = true,
-            isError = problem,
-            supportingText = if (showHint) {
-                {
-                    Text(
-                        linkMessage,
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    )
-                }
-            } else {
-                null
-            },
-            trailingIcon = {
-                IconButton(onClick = {
-                    val text = pasteText(context)
-                    if (text != null) onUrlChange(text)
-                }) { Icon(Icons.Rounded.ContentPaste, contentDescription = stringResource(R.string.paste)) }
-            },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go, autoCorrectEnabled = false),
-            keyboardActions = KeyboardActions(onGo = { scope.launch { onSubmit() } }),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            QualityPicker(quality, onQualityChange, Modifier.weight(1f))
-            Button(onClick = onSubmit, enabled = canSubmit && !submitting, modifier = Modifier.weight(1f)) {
-                Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                Text(stringResource(R.string.download), modifier = Modifier.padding(start = 8.dp))
-            }
+    val brand = LocalBrand.current
+    BrandCard(Modifier.padding(horizontal = 16.dp).fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                value = url,
+                onValueChange = onUrlChange,
+                label = { Text(stringResource(R.string.url_label)) },
+                placeholder = { Text(stringResource(R.string.url_placeholder), maxLines = 1) },
+                singleLine = true,
+                isError = url.isNotBlank() && !canSubmit,
+                trailingIcon = {
+                    IconButton(onClick = { pasteText(context)?.let(onUrlChange) }) {
+                        Icon(Icons.Rounded.ContentPaste, contentDescription = stringResource(R.string.paste))
+                    }
+                },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go, autoCorrectEnabled = false),
+                keyboardActions = KeyboardActions(onGo = { onSubmit() }),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = brand.card2, focusedContainerColor = brand.card),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            if (url.isNotBlank()) LinkChip(source, canSubmit, linkMessage)
+            QualityPicker(quality, onQualityChange, Modifier.fillMaxWidth())
+            GradientButton(
+                text = stringResource(R.string.download),
+                onClick = onSubmit,
+                enabled = canSubmit && !submitting,
+                modifier = Modifier.fillMaxWidth(),
+                icon = { Icon(Icons.Rounded.Download, contentDescription = null, tint = if (canSubmit) Color.White else brand.muted, modifier = Modifier.size(20.dp)) },
+            )
         }
     }
+}
+
+/** The colored hint under the field, like the web's source chip. */
+@Composable
+private fun LinkChip(source: LinkSource, canSubmit: Boolean, message: String) {
+    val brand = LocalBrand.current
+    val color = when {
+        source is LinkSource.Drm || source == LinkSource.Invalid -> brand.err
+        !canSubmit -> brand.warn
+        source is LinkSource.Hls || source is LinkSource.DirectFile -> brand.accent
+        else -> brand.accent2
+    }
+    Text(
+        message,
+        color = color,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(color.copy(alpha = 0.14f))
+            .padding(horizontal = 12.dp, vertical = 5.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -218,31 +394,127 @@ private fun QualityPicker(quality: Int?, onChange: (Int?) -> Unit, modifier: Mod
             singleLine = true,
             label = { Text(stringResource(R.string.quality_label)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            shape = RoundedCornerShape(12.dp),
             modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            QUALITIES.forEach { q ->
-                DropdownMenuItem(text = { Text(label(q)) }, onClick = { onChange(q); expanded = false })
+            QUALITIES.forEach { q -> DropdownMenuItem(text = { Text(label(q)) }, onClick = { onChange(q); expanded = false }) }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun Toolbar(state: LibraryUiState, vm: LibraryViewModel) {
+    val brand = LocalBrand.current
+    val c = state.controls
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyRow(contentPadding = CarouselPadding, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val filters = listOf(
+                LibraryFilter.All to R.string.filter_all,
+                LibraryFilter.Starred to R.string.filter_starred,
+                LibraryFilter.Active to R.string.filter_active,
+                LibraryFilter.Done to R.string.filter_done,
+                LibraryFilter.Failed to R.string.filter_failed,
+            )
+            // Like the web: hide empty filters, but keep "Todas" and the selected one.
+            items(filters.filter { (f, _) -> f == LibraryFilter.All || f == c.filter || (state.counts[f] ?: 0) > 0 }) { (filter, label) ->
+                FilterChip(
+                    selected = c.filter == filter,
+                    onClick = { vm.onFilter(filter) },
+                    label = { Text("${stringResource(label)}  ${state.counts[filter] ?: 0}") },
+                    shape = RoundedCornerShape(50),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = brand.accent,
+                        selectedLabelColor = Color.White,
+                        containerColor = Color.Transparent,
+                        labelColor = brand.muted,
+                    ),
+                )
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 16.dp)) {
+            SortPicker(c.sort, vm::onSort, Modifier.weight(1f))
+            OutlinedTextField(
+                value = c.query,
+                onValueChange = vm::onQuery,
+                placeholder = { Text(stringResource(R.string.search)) },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                singleLine = true,
+                shape = RoundedCornerShape(50),
+                colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = brand.card2, focusedContainerColor = brand.card),
+                modifier = Modifier.weight(1f),
+            )
+        }
+        if ((state.counts[LibraryFilter.Failed] ?: 0) > 0) {
+            TextButton(onClick = vm::clearFailed, modifier = Modifier.padding(horizontal = 8.dp)) {
+                Text(stringResource(R.string.clear_failed), color = brand.err)
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EmptyState() {
+private fun SortPicker(sort: LibrarySort, onChange: (LibrarySort) -> Unit, modifier: Modifier = Modifier) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    val label: @Composable (LibrarySort) -> String = {
+        stringResource(
+            when (it) {
+                LibrarySort.Recent -> R.string.sort_recent
+                LibrarySort.Views -> R.string.sort_views
+                LibrarySort.Name -> R.string.sort_name
+                LibrarySort.Size -> R.string.sort_size
+            },
+        )
+    }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
+        OutlinedTextField(
+            value = label(sort),
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            shape = RoundedCornerShape(50),
+            textStyle = androidx.compose.material3.LocalTextStyle.current.copy(fontSize = 14.sp),
+            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            LibrarySort.entries.forEach { s -> DropdownMenuItem(text = { Text(label(s)) }, onClick = { onChange(s); expanded = false }) }
+        }
+    }
+}
+
+@Composable
+private fun DayTitle(day: DayLabel) {
+    val text = when (day) {
+        DayLabel.Today -> stringResource(R.string.today)
+        DayLabel.Yesterday -> stringResource(R.string.yesterday)
+        is DayLabel.Date -> day.date.format(DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", Locale.forLanguageTag("es")))
+            .replaceFirstChar { it.titlecase(Locale.forLanguageTag("es")) }
+    }
+    Text(
+        text.uppercase(Locale.forLanguageTag("es")),
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = 0.8.sp,
+        color = LocalBrand.current.muted,
+        modifier = Modifier.padding(start = 20.dp, top = 4.dp).semantics { heading() },
+    )
+}
+
+@Composable
+private fun EmptyState(onExample: () -> Unit) {
+    val brand = LocalBrand.current
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth().padding(top = 48.dp, start = 16.dp, end = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 32.dp, start = 24.dp, end = 24.dp),
     ) {
-        Icon(Icons.Rounded.VideoLibrary, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(56.dp))
-        Text(stringResource(R.string.empty_title), style = MaterialTheme.typography.titleMedium)
-        Text(
-            stringResource(R.string.empty_body),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
+        Icon(Icons.Rounded.VideoLibrary, contentDescription = null, tint = brand.accent, modifier = Modifier.size(72.dp))
+        Text(stringResource(R.string.empty_title), fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = brand.text)
+        Text(stringResource(R.string.empty_body), fontSize = 14.sp, color = brand.muted, textAlign = TextAlign.Center)
+        OutlinedButton(onClick = onExample) { Text(stringResource(R.string.try_example)) }
     }
 }
 

@@ -10,6 +10,9 @@ import com.carlospinan.guardavideo.library.JobRepository
 import com.carlospinan.guardavideo.library.MediaPostProcessor
 import com.carlospinan.guardavideo.library.createDatabase
 import com.carlospinan.guardavideo.library.sourceMessage
+import com.carlospinan.guardavideo.player.PlaybackController
+import com.carlospinan.guardavideo.player.PlayerUiState
+import com.carlospinan.guardavideo.player.VideoPlayer
 import com.carlospinan.guardavideo.source.detectSource
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
@@ -118,6 +121,13 @@ class GuardavideoIos {
 
     fun hasActiveDownloads(): Boolean = running.isNotEmpty()
 
+    /**
+     * Shared playback rules (resume, periodic save, view count) over a Swift AVPlayer adapter
+     * that implements [VideoPlayer]. One per player screen; call [IosPlayback.close] on exit.
+     */
+    fun playback(player: VideoPlayer): IosPlayback =
+        IosPlayback(PlaybackController(player, repository, scope, fileExists = { NSFileManager.defaultManager.fileExistsAtPath(it) }), scope)
+
     private fun start(id: String) {
         if (running[id]?.isActive == true) return
         running[id] = scope.launch {
@@ -141,6 +151,20 @@ private class PlaylistIndexer(private val fs: FileSystem) : MediaPostProcessor {
         fs.write(playlist) { writeUtf8(localPlaylist(result.segments, result.path.name)) }
         return playlist
     }
+}
+
+/** Swift-friendly face of [PlaybackController]: callbacks instead of Flow and suspend. */
+class IosPlayback internal constructor(private val controller: PlaybackController, private val scope: CoroutineScope) {
+    fun open(id: String) {
+        scope.launch { controller.open(id) }
+    }
+
+    fun observe(onChange: (PlayerUiState) -> Unit): Subscription =
+        Subscription(scope.launch { controller.state.collect { onChange(it) } })
+
+    fun pause() = controller.pause()
+
+    fun close() = controller.close()
 }
 
 @OptIn(ExperimentalForeignApi::class)

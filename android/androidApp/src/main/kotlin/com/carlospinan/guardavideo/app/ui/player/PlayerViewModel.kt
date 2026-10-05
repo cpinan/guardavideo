@@ -1,105 +1,52 @@
 package com.carlospinan.guardavideo.app.ui.player
 
-import androidx.core.net.toUri
+import android.util.Rational
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.media3.common.MediaItem
-import android.util.Rational
-import androidx.media3.common.Player
-import androidx.media3.common.VideoSize
 import androidx.navigation.toRoute
 import com.carlospinan.guardavideo.app.PlayerRoute
 import com.carlospinan.guardavideo.app.di.ApplicationScope
-import com.carlospinan.guardavideo.library.Job
 import com.carlospinan.guardavideo.library.JobRepository
+import com.carlospinan.guardavideo.player.PlaybackController
+import com.carlospinan.guardavideo.player.PlayerUiState
+import com.carlospinan.guardavideo.player.VideoPlayer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
 
 /**
- * Owns the player so playback survives rotation. The position is saved every few seconds
- * and when leaving, so the next play resumes where the user stopped.
+ * Thin Android wrapper around the shared [PlaybackController]: it owns the controller for the
+ * screen's lifetime (so playback survives rotation) and exposes its state. All playback rules
+ * (resume, periodic save, view count) live in the shared module, reused by iOS.
  */
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
     savedState: SavedStateHandle,
-    val player: Player,
-    private val repository: JobRepository,
-    @ApplicationScope private val appScope: CoroutineScope,
+    val player: VideoPlayer,
+    repository: JobRepository,
+    @ApplicationScope appScope: CoroutineScope,
 ) : ViewModel() {
-    private val id = savedState.toRoute<PlayerRoute>().id
+    private val controller = PlaybackController(
+        player = player,
+        repository = repository,
+        scope = viewModelScope, // main thread: ExoPlayer is a main-thread object
+        fileExists = { File(it).exists() },
+        persistScope = appScope, // the last save must outlive this screen
+    )
 
-    private val _job = MutableStateFlow<Job?>(null)
-    val job: StateFlow<Job?> = _job
-
-    private val _missing = MutableStateFlow(false)
-    val missing: StateFlow<Boolean> = _missing
-
-    /** Drives Picture-in-Picture: auto-enter only while playing, window shaped like the video. */
-    private val _isPlaying = MutableStateFlow(false)
-    val isPlaying: StateFlow<Boolean> = _isPlaying
-    private val _aspect = MutableStateFlow(Rational(16, 9))
-    val aspect: StateFlow<Rational> = _aspect
-
-    private val listener = object : Player.Listener {
-        override fun onIsPlayingChanged(isPlaying: Boolean) {
-            _isPlaying.value = isPlaying
-        }
-
-        override fun onVideoSizeChanged(videoSize: VideoSize) {
-            if (videoSize.width > 0 && videoSize.height > 0) _aspect.value = pipSafe(videoSize.width, videoSize.height)
-        }
-    }
+    val state: StateFlow<PlayerUiState> = controller.state
 
     init {
-        player.addListener(listener)
-        viewModelScope.launch {
-            val job = repository.get(id)
-            _job.value = job
-            val file = job?.filePath?.let(::File)
-            if (file == null || !file.exists()) {
-                _missing.value = true
-                return@launch
-            }
-            player.setMediaItem(MediaItem.fromUri(file.toUri()), job.positionMs)
-            player.prepare()
-            player.playWhenReady = true
-        }
-        viewModelScope.launch {
-            while (isActive) {
-                delay(SAVE_EVERY_MS)
-                if (player.isPlaying) savePosition()
-            }
-        }
+        viewModelScope.launch { controller.open(savedState.toRoute<PlayerRoute>().id) }
     }
 
-    fun pause() {
-        player.pause()
-        savePosition()
-    }
+    fun pause() = controller.pause()
 
-    private fun savePosition() {
-        val position = player.currentPosition
-        val duration = player.duration.takeIf { it > 0 }
-        appScope.launch { repository.savePosition(id, position, duration) } // outlives this screen
-    }
-
-    override fun onCleared() {
-        if (_job.value != null && !_missing.value) savePosition()
-        player.removeListener(listener)
-        player.release()
-    }
-
-    private companion object {
-        const val SAVE_EVERY_MS = 3_000L
-    }
+    override fun onCleared() = controller.close()
 }
 
 /** PiP accepts aspect ratios between 1:2.39 and 2.39:1; clamp anything outside. */

@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.PictureInPictureModeChangedInfo
 import androidx.core.util.Consumer
 import com.carlospinan.guardavideo.app.MainActivity
+import com.carlospinan.guardavideo.app.media.ExoVideoPlayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -48,9 +49,10 @@ import com.carlospinan.guardavideo.app.R
 
 @Composable
 fun PlayerScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltViewModel()) {
-    val missing by viewModel.missing.collectAsStateWithLifecycle()
-    val playing by viewModel.isPlaying.collectAsStateWithLifecycle()
-    val aspect by viewModel.aspect.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val missing = state.missing
+    val playing = state.isPlaying
+    val aspect = remember(state.aspectWidth, state.aspectHeight) { pipSafe(state.aspectWidth, state.aspectHeight) }
     val activity = LocalActivity.current as? MainActivity
     val inPip = rememberIsInPipMode(activity)
     val pipParams = remember(playing, aspect) {
@@ -79,7 +81,8 @@ fun PlayerScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltViewModel(
             AndroidView(
                 factory = { context ->
                     PlayerView(context).apply {
-                        player = viewModel.player
+                        // The only Media3-specific line in the screen: bind the native surface.
+                        player = (viewModel.player as ExoVideoPlayer).media3
                         keepScreenOn = true
                         setShowNextButton(false)
                         setShowPreviousButton(false)

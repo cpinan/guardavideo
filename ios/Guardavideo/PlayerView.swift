@@ -2,51 +2,48 @@ import AVKit
 import Shared
 import SwiftUI
 
-/// Native player (controls, AirPlay, Picture-in-Picture) that resumes where the user stopped and
-/// saves the position every few seconds and on exit.
+/// Native surface (controls, AirPlay, Picture-in-Picture) over the shared playback rules:
+/// `PlaybackController` resumes, saves the position and counts views; `AvVideoPlayer` adapts AVPlayer.
 struct PlayerView: View {
     @EnvironmentObject private var library: LibraryModel
     let job: Shared.Job
-    let fileURL: URL
-    @State private var player = AVPlayer()
-    @State private var observer: Any?
+    @StateObject private var session = PlayerSession()
 
     var body: some View {
-        PlayerController(player: player)
-            .ignoresSafeArea()
-            .navigationTitle(job.displayTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear(perform: start)
-            .onDisappear(perform: stop)
-    }
-
-    /// A local playlist must go through the loopback server; plain video files play from disk.
-    private var playableURL: URL {
-        fileURL.pathExtension == "m3u8" ? (LocalMediaServer.shared.url(for: fileURL) ?? fileURL) : fileURL
-    }
-
-    private func start() {
-        player.replaceCurrentItem(with: AVPlayerItem(url: playableURL))
-        if job.positionMs > 0 {
-            player.seek(to: CMTime(value: job.positionMs, timescale: 1000), toleranceBefore: .zero, toleranceAfter: .zero)
+        Group {
+            if session.missing {
+                Text("El archivo ya no está en el teléfono").foregroundStyle(.secondary)
+            } else {
+                PlayerController(player: session.player.avPlayer).ignoresSafeArea()
+            }
         }
-        player.play()
-        observer = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 3, preferredTimescale: 1), queue: .main) { _ in
-            save()
-        }
+        .navigationTitle(job.displayTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear { session.start(job: job, library: library) }
+        .onDisappear { session.stop() }
+    }
+}
+
+/// Owns the adapter and the shared controller for one opening of the player.
+@MainActor
+final class PlayerSession: ObservableObject {
+    let player = AvVideoPlayer()
+    @Published var missing = false
+    private var playback: IosPlayback?
+    private var subscription: Subscription?
+
+    func start(job: Shared.Job, library: LibraryModel) {
+        guard playback == nil else { return }
+        let playback = library.playback(player)
+        subscription = playback.observe { [weak self] state in self?.missing = state.missing }
+        playback.open(id: job.id)
+        self.playback = playback
     }
 
-    private func stop() {
-        save()
-        if let observer { player.removeTimeObserver(observer) }
-        player.pause()
-    }
-
-    private func save() {
-        let position = player.currentTime().seconds
-        let duration = player.currentItem?.duration.seconds ?? 0
-        guard position.isFinite else { return }
-        library.savePosition(job, positionMs: Int64(position * 1000), durationMs: duration.isFinite ? Int64(duration * 1000) : 0)
+    func stop() {
+        subscription?.cancel()
+        playback?.close()
+        playback = nil
     }
 }
 

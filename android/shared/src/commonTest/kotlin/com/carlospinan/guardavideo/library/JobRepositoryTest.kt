@@ -98,6 +98,17 @@ class JobRepositoryTest {
     }
 
     @Test
+    fun viewsAreCountedOnlyForFinishedVideos() = runTest {
+        val queued = assertIs<CreateResult.Created>(repo.create("https://x.org/q.mp4", null)).job
+        assertEquals(0, repo.recordView(queued.id)!!.viewCount)
+        val video = done("https://x.org/a.mp4", "/v/a.mp4")
+        repo.recordView(video.id)
+        val after = repo.recordView(video.id)!!
+        assertEquals(2, after.viewCount)
+        assertTrue(after.lastViewedAt != null)
+    }
+
+    @Test
     fun onlyFinishedVideosCanBeStarred() = runTest {
         val queued = assertIs<CreateResult.Created>(repo.create("https://x.org/q.mp4", null)).job
         assertFalse(repo.setStarred(queued.id, true)!!.starred)

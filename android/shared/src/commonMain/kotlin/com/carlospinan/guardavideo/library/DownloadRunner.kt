@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okio.FileSystem
 import okio.Path
+import okio.Path.Companion.toPath
 
 /**
  * Optional step after a download, e.g. remuxing MPEG-TS into MP4 on the device. Returns the
@@ -24,6 +25,23 @@ import okio.Path
  */
 fun interface MediaPostProcessor {
     suspend fun process(result: DownloadResult): Path
+}
+
+/** Reads a finished file's duration (platform media APIs); null when unknown. */
+fun interface MediaProbe {
+    suspend fun durationMs(file: Path): Long?
+}
+
+/**
+ * Videos downloaded before durations were stored (schema v1) get one now, once: the thumbnail
+ * badge and the "watched" bar need it. Cheap: only finished jobs without a duration are probed.
+ */
+suspend fun backfillDurations(repo: JobRepository, probe: MediaProbe) {
+    repo.observeJobsOnce().filter { it.status == JobStatus.Done && it.durationMs == null && it.filePath != null }
+        .forEach { job ->
+            val ms = runCatching { probe.durationMs(job.filePath!!.toPath()) }.getOrNull()
+            if (ms != null && ms > 0) repo.update(job.id) { it.copy(durationMs = it.durationMs ?: ms) }
+        }
 }
 
 /**
@@ -39,6 +57,7 @@ class DownloadRunner(
     private val fs: FileSystem,
     private val downloadsDir: Path,
     private val postProcessor: MediaPostProcessor = MediaPostProcessor { it.path },
+    private val probe: MediaProbe = MediaProbe { null },
 ) {
     /** Returns the final status, or null if the job was deleted or already finished. */
     suspend fun run(id: String, onUpdate: (Job) -> Unit = {}): JobStatus? {
@@ -75,11 +94,16 @@ class DownloadRunner(
             } catch (_: Exception) {
                 result.path
             }
+            // HLS already says how long each segment is; otherwise ask the platform.
+            val duration = result.segments.takeIf { it.isNotEmpty() }
+                ?.let { spans -> (spans.sumOf { it.durationSec } * 1000).toLong() }
+                ?: runCatching { probe.durationMs(file) }.getOrNull()
             repo.update(id) {
                 it.copy(
                     status = JobStatus.Done, percent = 100f, retries = 0, error = null,
                     filePath = file.toString(), sizeBytes = fs.metadata(file).size ?: result.sizeBytes,
                     title = it.title ?: result.title,
+                    durationMs = it.durationMs ?: duration,
                 )
             }?.let(onUpdate)
             JobStatus.Done

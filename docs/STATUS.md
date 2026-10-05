@@ -3,7 +3,7 @@
 _Last updated: 2026-10-04 · branch `main` · 0 uncommitted files_
 
 ## Next action
-User tests v0.2.0 on the Pixel (already installed): a Dailymotion link via Share → Guardavideo, background download with notification, PiP, "Guardar en la galería".
+User tests v0.3.0 on the Pixel (installed 2026-10-05): web-style library (shelves, filters, day carousels, dark mode), a Dailymotion link via Share → Guardavideo, player resume/PiP, "Guardar en la galería".
 
 ## State
 - Web + API (Mac): HLS + yt-dlp downloads, SQLite library, shelves, mobile UI, `make serve` (production on 127.0.0.1:8080, debug off) + `make tailscale-serve` for private sharing. Repo `github.com/cpinan/guardavideo` (private); CI runs `check` (web) and `android` jobs, both green.

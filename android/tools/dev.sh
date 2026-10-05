@@ -3,7 +3,7 @@
 #   tools/dev.sh install            build debug + install
 #   tools/dev.sh share URL          open the app as if URL was shared from another app
 #   tools/dev.sh shot OUT.png       screenshot, downscaled to 1000px (cheap to read)
-#   tools/dev.sh tap X Y | text "abc" | key BACK
+#   tools/dev.sh tap X Y | swipe X1 Y1 X2 Y2 | text "abc" | key BACK
 #   tools/dev.sh ui                 dump the UI tree (text, content-desc, bounds) compactly
 #   tools/dev.sh files              list downloaded videos
 # Device: $ANDROID_SERIAL (default: the first emulator).
@@ -25,6 +25,7 @@ case "${1:-}" in
   shot)
     adb exec-out screencap -p > "$2.raw.png" && sips -Z 1000 "$2.raw.png" --out "$2" >/dev/null && rm "$2.raw.png" ;;
   tap) adb shell input tap "$2" "$3" ;;
+  swipe) adb shell input swipe "$2" "$3" "$4" "$5" "${6:-300}" ;;  # x1 y1 x2 y2 [ms]
   text) adb shell input text "$(printf %q "$2")" ;;
   key) adb shell input keyevent "KEYCODE_$2" ;;
   ui)

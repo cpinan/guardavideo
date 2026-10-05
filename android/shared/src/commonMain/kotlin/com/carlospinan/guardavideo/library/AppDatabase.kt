@@ -1,5 +1,6 @@
 package com.carlospinan.guardavideo.library
 
+import androidx.room.AutoMigration
 import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
@@ -12,7 +13,13 @@ import kotlinx.coroutines.IO
  * Schema changes: bump [version], add a Migration, and keep the exported JSON in
  * shared/schemas (checked in) so migrations can be verified.
  */
-@Database(entities = [JobEntity::class], version = 1, exportSchema = true)
+@Database(
+    entities = [JobEntity::class],
+    version = 2,
+    exportSchema = true,
+    // v2: view_count, last_viewed_at, position_updated_at (new nullable / defaulted columns).
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
+)
 @ConstructedBy(AppDatabaseConstructor::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun jobs(): JobDao

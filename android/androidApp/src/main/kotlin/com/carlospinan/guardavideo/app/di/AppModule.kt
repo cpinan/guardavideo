@@ -13,7 +13,13 @@ import com.carlospinan.guardavideo.library.JobRepository
 import com.carlospinan.guardavideo.library.createDatabase
 import com.carlospinan.guardavideo.app.download.DownloadQueue
 import com.carlospinan.guardavideo.app.download.DownloadScheduler
+import com.carlospinan.guardavideo.app.media.AndroidMediaProbe
+import com.carlospinan.guardavideo.app.media.AndroidStorageInfo
 import com.carlospinan.guardavideo.app.media.MediaStoreExporter
+import com.carlospinan.guardavideo.app.media.StorageInfo
+import com.carlospinan.guardavideo.app.settings.PrefsThemeStore
+import com.carlospinan.guardavideo.app.settings.ThemeStore
+import com.carlospinan.guardavideo.library.MediaProbe
 import com.carlospinan.guardavideo.app.media.TransformerRemuxer
 import com.carlospinan.guardavideo.app.media.VideoExporter
 import com.carlospinan.guardavideo.library.MediaPostProcessor
@@ -56,6 +62,18 @@ abstract class BindingsModule {
 
     @Binds
     abstract fun postProcessor(remuxer: TransformerRemuxer): MediaPostProcessor
+
+    @Binds
+    abstract fun probe(probe: AndroidMediaProbe): MediaProbe
+
+    @Binds
+    abstract fun storage(storage: AndroidStorageInfo): StorageInfo
+
+    @Binds
+    abstract fun themeStore(store: PrefsThemeStore): ThemeStore
+
+    @Binds
+    abstract fun now(clock: SystemNow): Now
 }
 
 @Module
@@ -111,5 +129,15 @@ object AppModule {
         fs: FileSystem,
         @DownloadsDir dir: Path,
         postProcessor: MediaPostProcessor,
-    ): DownloadRunner = DownloadRunner(repo, downloader, fs, dir, postProcessor)
+        probe: MediaProbe,
+    ): DownloadRunner = DownloadRunner(repo, downloader, fs, dir, postProcessor, probe)
+}
+
+/** "Now", injectable so ViewModels that group by day can be tested at a fixed time. */
+fun interface Now {
+    fun millis(): Long
+}
+
+class SystemNow @javax.inject.Inject constructor() : Now {
+    override fun millis(): Long = System.currentTimeMillis()
 }

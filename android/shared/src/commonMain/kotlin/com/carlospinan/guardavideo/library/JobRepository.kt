@@ -39,6 +39,8 @@ class JobRepository(
 
     suspend fun get(id: String): Job? = dao.get(id)?.toJob()
 
+    suspend fun observeJobsOnce(): List<Job> = dao.all().map { it.toJob() }
+
     suspend fun active(): List<Job> = dao.all().map { it.toJob() }.filter { it.status.isActive }
 
     suspend fun create(rawUrl: String, quality: Int?): CreateResult = mutex.withLock {
@@ -78,9 +80,18 @@ class JobRepository(
         update(id) { job ->
             val total = durationMs ?: job.durationMs
             val watched = total != null && total > 0 && positionMs >= total - END_MARGIN_MS
-            job.copy(positionMs = if (watched) 0 else positionMs, durationMs = total, watched = job.watched || watched)
+            job.copy(
+                positionMs = if (watched) 0 else positionMs,
+                durationMs = total,
+                watched = job.watched || watched,
+                positionUpdatedAt = clock(),
+            )
         }
     }
+
+    /** One more play (the player calls it once per opening). */
+    suspend fun recordView(id: String): Job? =
+        update(id) { if (it.status == JobStatus.Done) it.copy(viewCount = it.viewCount + 1, lastViewedAt = clock()) else it }
 
     /**
      * Removes a finished job and its file. The file stays if another job still points at it.

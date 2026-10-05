@@ -68,9 +68,8 @@ final class LibraryModel: ObservableObject {
     func retry(_ job: Shared.Job) { core.retry(id: job.id) }
     func delete(_ job: Shared.Job) { core.delete(id: job.id) }
     func toggleStar(_ job: Shared.Job) { core.setStarred(id: job.id, starred: !job.starred) }
-    func savePosition(_ job: Shared.Job, positionMs: Int64, durationMs: Int64) {
-        core.savePosition(id: job.id, positionMs: positionMs, durationMs: durationMs)
-    }
+    /// Shared playback rules for one player screen, over the given platform player.
+    func playback(_ player: VideoPlayer) -> IosPlayback { core.playback(player: player) }
 
     /// iOS suspends apps in the background; ask for the extra minutes it grants while downloading.
     private func updateBackgroundTask() {

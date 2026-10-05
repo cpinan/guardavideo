@@ -119,6 +119,33 @@ class DownloadRunnerTest {
     }
 
     @Test
+    fun durationComesFromHlsSegmentsOrTheProbe() = runTest {
+        val job = queued()
+        DownloadRunner(
+            repo,
+            object : VideoDownloader {
+                override suspend fun download(source: LinkSource, id: String, destDir: Path, quality: Int?, listener: DownloadListener): DownloadResult {
+                    val ts = destDir / "$id.ts"
+                    fs.write(ts) { writeUtf8("ts") }
+                    return DownloadResult(ts, null, 2, listOf(com.carlospinan.guardavideo.download.SegmentSpan(4.5, 0, 1), com.carlospinan.guardavideo.download.SegmentSpan(2.0, 1, 1)))
+                }
+            },
+            fs, dir, probe = { 999 },
+        ).run(job.id)
+        assertEquals(6_500L, repo.get(job.id)!!.durationMs)
+    }
+
+    @Test
+    fun backfillAddsDurationsOnlyWhereMissing() = runTest {
+        val job = queued()
+        repo.update(job.id) { it.copy(status = JobStatus.Done, filePath = "/downloads/a.mp4") }
+        backfillDurations(repo) { 42_000 }
+        assertEquals(42_000L, repo.get(job.id)!!.durationMs)
+        backfillDurations(repo) { 1 } // already known: untouched
+        assertEquals(42_000L, repo.get(job.id)!!.durationMs)
+    }
+
+    @Test
     fun aFailedPostProcessKeepsTheOriginalDownload() = runTest {
         val job = queued()
         val status = runner(MediaPostProcessor { error("remux failed") }) { _, id, destDir, _ ->

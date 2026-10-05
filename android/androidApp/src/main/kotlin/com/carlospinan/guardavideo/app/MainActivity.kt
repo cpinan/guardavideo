@@ -17,7 +17,10 @@ import com.carlospinan.guardavideo.app.ui.library.LibraryScreen
 import com.carlospinan.guardavideo.app.ui.library.extractUrl
 import com.carlospinan.guardavideo.app.ui.player.PlayerScreen
 import com.carlospinan.guardavideo.app.ui.theme.GuardavideoTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.carlospinan.guardavideo.app.settings.ThemeStore
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -28,6 +31,8 @@ data class PlayerRoute(val id: String)
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var themeStore: ThemeStore
+
     /** Set by the player screen while a video plays; used to enter PiP on Android 10-11. */
     var pipParams: PictureInPictureParams? = null
 
@@ -48,7 +53,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         if (savedInstanceState == null) sharedUrl = sharedLink(intent)
         setContent {
-            GuardavideoTheme {
+            val themeMode by themeStore.mode.collectAsStateWithLifecycle()
+            GuardavideoTheme(themeMode) {
                 val nav = rememberNavController()
                 NavHost(nav, startDestination = LibraryRoute) {
                     composable<LibraryRoute> {
@@ -56,6 +62,8 @@ class MainActivity : ComponentActivity() {
                             sharedUrl = sharedUrl,
                             onSharedUrlConsumed = { sharedUrl = null },
                             onPlay = { id -> nav.navigate(PlayerRoute(id)) },
+                            themeMode = themeMode,
+                            onToggleTheme = { themeStore.set(themeMode.next()) },
                         )
                     }
                     composable<PlayerRoute> { PlayerScreen(onBack = { nav.popBackStack() }) }

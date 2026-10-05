@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Guardavideo</string>
+    <string name="tagline">Descarga videos con progreso en vivo.</string>
+    <string name="theme_system">Tema: sistema. Cambiar</string>
+    <string name="theme_light">Tema: claro. Cambiar</string>
+    <string name="theme_dark">Tema: oscuro. Cambiar</string>
 
     <string name="url_label">URL del video</string>
     <string name="url_placeholder">Dailymotion, YouTube, .m3u8 o .mp4</string>
@@ -10,27 +14,59 @@
     <string name="download">Descargar</string>
     <string name="clipboard_empty">El portapapeles no tiene un enlace http(s)</string>
 
-    <string name="queued">Creado</string>
     <string name="already_downloading">Ese video ya se está descargando</string>
     <string name="already_downloaded">Ya tenías este video</string>
     <string name="download_started">Descarga en cola</string>
 
-    <string name="empty_title">Aún no hay videos</string>
+    <string name="summary">%1$d videos · %2$s · %3$s libres</string>
+    <string name="downloads">Descargas</string>
+    <string name="counts_active_done">%1$d en curso · %2$d completadas</string>
+    <string name="counts_done">%1$d completadas</string>
+
+    <string name="shelf_continue">Seguir viendo</string>
+    <string name="shelf_favorites">Favoritos</string>
+    <string name="shelf_views">Más vistos</string>
+    <string name="shelf_recent">Recién descargados</string>
+
+    <string name="filter_all">Todas</string>
+    <string name="filter_starred">★ Favoritos</string>
+    <string name="filter_active">En curso</string>
+    <string name="filter_done">Listas</string>
+    <string name="filter_failed">Con error</string>
+    <string name="sort_recent">Más recientes</string>
+    <string name="sort_views">Más vistos</string>
+    <string name="sort_name">Nombre (A–Z)</string>
+    <string name="sort_size">Tamaño</string>
+    <string name="search">Buscar…</string>
+    <string name="no_matches">Nada coincide con el filtro o la búsqueda.</string>
+    <string name="clear_failed">Limpiar con error</string>
+    <string name="today">Hoy</string>
+    <string name="yesterday">Ayer</string>
+
+    <string name="empty_title">Aún no hay descargas.</string>
     <string name="empty_body">Pega el enlace de un video (Dailymotion, YouTube… o un .m3u8/.mp4 directo), o compártelo desde otra app con «Compartir → Guardavideo».</string>
+    <string name="try_example">Probar con un enlace de ejemplo</string>
 
     <string name="status_queued">En cola</string>
     <string name="status_running">Descargando</string>
+    <string name="status_retrying">Reintentando</string>
+    <string name="status_done">Listo</string>
     <string name="status_error">Error</string>
     <string name="status_cancelled">Cancelado</string>
     <string name="reconnecting">Reconectando… intento %1$d</string>
     <string name="percent">%1$d %%</string>
+    <string name="eta">%1$s restantes</string>
+    <string name="waiting_turn">Esperando turno</string>
     <string name="watched">Visto</string>
     <string name="resume_at">Visto %1$s</string>
+    <string name="views_one">1 vista</string>
+    <string name="views_many">%1$d vistas</string>
 
     <string name="cancel">Cancelar</string>
     <string name="retry">Reintentar</string>
     <string name="delete">Eliminar</string>
     <string name="play">Reproducir</string>
+    <string name="continue_at">Continuar %1$s</string>
     <string name="star">Marcar como favorito</string>
     <string name="unstar">Quitar de favoritos</string>
     <string name="delete_title">¿Eliminar este video?</string>

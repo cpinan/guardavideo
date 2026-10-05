@@ -1,7 +1,11 @@
 package com.carlospinan.guardavideo.app
 
 import com.carlospinan.guardavideo.app.download.DownloadQueue
+import com.carlospinan.guardavideo.app.media.StorageInfo
 import com.carlospinan.guardavideo.app.media.VideoExporter
+import com.carlospinan.guardavideo.app.ui.library.DayLabel
+import com.carlospinan.guardavideo.app.ui.library.groupByDay
+import java.time.ZoneOffset
 import com.carlospinan.guardavideo.download.LinkPolicy
 import com.carlospinan.guardavideo.library.Job
 import com.carlospinan.guardavideo.app.ui.library.LibraryViewModel
@@ -47,7 +51,7 @@ class LibraryViewModelTest {
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        vm = LibraryViewModel(repo, queue, exporter, LinkPolicy(sitePages = true))
+        vm = LibraryViewModel(repo, queue, exporter, LinkPolicy(sitePages = true), storage = object : StorageInfo { override fun freeBytes() = 5L }, now = { NOW })
     }
 
     @AfterTest
@@ -114,5 +118,25 @@ class LibraryViewModelTest {
         vm.saveToGallery(job)
         assertEquals(R.string.save_failed, (vm.messages.first() as UiMessage.Res).id)
         assertEquals(listOf("id1", "id1"), exporter.exported)
+    }
+
+    @Test
+    fun jobsAreGroupedByDayWithFinishedVideosApart() {
+        val day = 86_400_000L
+        val jobs = listOf(
+            Job(id = "a", url = "u", status = com.carlospinan.guardavideo.library.JobStatus.Done, createdAt = NOW - 1_000),
+            Job(id = "b", url = "u", status = com.carlospinan.guardavideo.library.JobStatus.Running, createdAt = NOW - 2_000),
+            Job(id = "c", url = "u", status = com.carlospinan.guardavideo.library.JobStatus.Done, createdAt = NOW - day),
+            Job(id = "d", url = "u", status = com.carlospinan.guardavideo.library.JobStatus.Error, createdAt = NOW - 3 * day),
+        )
+        val groups = groupByDay(jobs, NOW, ZoneOffset.UTC)
+        assertEquals(listOf<DayLabel>(DayLabel.Today, DayLabel.Yesterday), groups.take(2).map { it.day })
+        assertEquals(listOf("b") to listOf("a"), groups[0].pending.map { it.id } to groups[0].finished.map { it.id })
+        assertTrue(groups[2].day is DayLabel.Date)
+        assertEquals(listOf("d"), groups[2].pending.map { it.id })
+    }
+
+    private companion object {
+        const val NOW = 1_790_000_000_000L + 12 * 3_600_000L // midday UTC
     }
 }

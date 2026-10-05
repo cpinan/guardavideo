@@ -95,7 +95,7 @@ private struct JobRow: View {
     var body: some View {
         if job.status == JobStatus.done, let path = job.filePath {
             NavigationLink {
-                PlayerView(job: job, fileURL: URL(fileURLWithPath: path))
+                PlayerView(job: job)
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "play.rectangle.fill").font(.title2).foregroundStyle(.tint)
