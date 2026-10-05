@@ -32,6 +32,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -141,6 +142,9 @@ fun Thumb(job: Job, modifier: Modifier = Modifier, showCheck: Boolean = false, o
             .background(Brush.linearGradient(listOf(brand.card2, brand.accent.copy(alpha = 0.18f)))),
     ) {
         if (job.status == JobStatus.Done && job.filePath != null) {
+            // Keyed on size and length too: when a file is repaired or replaced in place (same
+            // path), the thumbnail is fetched again instead of keeping the failed/old frame.
+            key(job.filePath, job.sizeBytes, job.durationMs) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(File(job.filePath!!))
@@ -151,6 +155,7 @@ fun Thumb(job: Job, modifier: Modifier = Modifier, showCheck: Boolean = false, o
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )
+            }
         }
         if (job.status.isActive) {
             ProgressRing(job.percent, indeterminate = job.status == JobStatus.Queued || job.percent <= 0f, modifier = Modifier.align(Alignment.Center))

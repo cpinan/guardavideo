@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
+import androidx.compose.material.icons.rounded.Share
+import com.carlospinan.guardavideo.app.ui.shareOriginalLink
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -99,6 +101,12 @@ fun PlayerScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltViewModel(
                     Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
                 }
                 Spacer(Modifier.weight(1f))
+                state.job?.let { job ->
+                    val context = LocalContext.current
+                    IconButton(onClick = { shareOriginalLink(context, job) }, colors = buttonColors) {
+                        Icon(Icons.Rounded.Share, contentDescription = stringResource(R.string.share_link))
+                    }
+                }
                 if (!missing) {
                     IconButton(onClick = { activity?.enterPictureInPictureMode(pipParams) }, colors = buttonColors) {
                         Icon(Icons.Rounded.PictureInPictureAlt, contentDescription = stringResource(R.string.pip))

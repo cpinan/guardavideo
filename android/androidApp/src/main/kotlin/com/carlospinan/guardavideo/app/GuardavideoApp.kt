@@ -9,7 +9,10 @@ import com.carlospinan.guardavideo.app.media.YtDlpUpdater
 import com.carlospinan.guardavideo.app.download.Notifications
 import com.carlospinan.guardavideo.library.JobRepository
 import com.carlospinan.guardavideo.library.MediaProbe
+import com.carlospinan.guardavideo.library.MediaPostProcessor
 import com.carlospinan.guardavideo.library.backfillDurations
+import com.carlospinan.guardavideo.library.repairFragmentedVideos
+import okio.FileSystem
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -23,6 +26,8 @@ class GuardavideoApp : Application(), Configuration.Provider {
     @Inject @ApplicationScope lateinit var appScope: CoroutineScope
     @Inject lateinit var ytDlpUpdater: YtDlpUpdater
     @Inject lateinit var probe: MediaProbe
+    @Inject lateinit var postProcessor: MediaPostProcessor
+    @Inject lateinit var fs: FileSystem
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -34,6 +39,10 @@ class GuardavideoApp : Application(), Configuration.Provider {
         // library still calls active (KEEP: no duplicate work if it is already scheduled).
         appScope.launch { repository.active().forEach { queue.enqueue(it.id) } }
         appScope.launch { ytDlpUpdater.updateIfStale() }
-        appScope.launch { backfillDurations(repository, probe) }
+        appScope.launch {
+            // Old fragmented MP4s first (they also get their real length), then any missing durations.
+            repairFragmentedVideos(repository, fs, postProcessor, probe)
+            backfillDurations(repository, probe)
+        }
     }
 }

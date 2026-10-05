@@ -78,5 +78,7 @@
     <string name="saved_to_gallery">Guardado en Películas › Guardavideo</string>
     <string name="save_failed">No se pudo guardar en la galería</string>
     <string name="pip">Imagen en imagen</string>
+    <string name="share_link">Compartir enlace</string>
+    <string name="copy_link">Copiar enlace</string>
     <string name="player_missing">El archivo ya no está en el teléfono</string>
 </resources>

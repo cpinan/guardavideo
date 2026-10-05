@@ -52,6 +52,12 @@ struct LibraryView: View {
                                     }
                                 }
                                 .contextMenu {
+                                    if let link = URL(string: job.url) {
+                                        // The original link (not the file): WhatsApp, Messages…
+                                        ShareLink(item: link, subject: Text(job.displayTitle), message: Text(job.displayTitle)) {
+                                            Label("Compartir enlace", systemImage: "link")
+                                        }
+                                    }
                                     if let file = exportFile(job) {
                                         ShareLink(item: file) { Label("Compartir o guardar", systemImage: "square.and.arrow.up") }
                                     }

@@ -146,6 +146,26 @@ class DownloadRunnerTest {
     }
 
     @Test
+    fun fragmentedVideosAreConvertedOnceAndGetTheirRealLength() = runTest {
+        val job = queued()
+        val file = dir / "j1.mp4"
+        fs.createDirectories(dir)
+        // ftyp + moof: fragmented
+        fs.write(file) { writeInt(12).writeUtf8("ftyp").writeInt(0).writeInt(12).writeUtf8("moof").writeInt(0) }
+        repo.update(job.id) { it.copy(status = JobStatus.Done, filePath = file.toString(), durationMs = 450_000) }
+        var converted = 0
+        val remux = MediaPostProcessor { result ->
+            converted++
+            fs.write(result.path) { writeInt(12).writeUtf8("ftyp").writeInt(0).writeInt(12).writeUtf8("moov").writeInt(0) }
+            result.path
+        }
+        repairFragmentedVideos(repo, fs, remux, probe = { 4_380_000 })
+        assertEquals(4_380_000L, repo.get(job.id)!!.durationMs) // 1:13:00, not 7:30
+        repairFragmentedVideos(repo, fs, remux, probe = { 1 }) // now regular: skipped
+        assertEquals(1, converted)
+    }
+
+    @Test
     fun aFailedPostProcessKeepsTheOriginalDownload() = runTest {
         val job = queued()
         val status = runner(MediaPostProcessor { error("remux failed") }) { _, id, destDir, _ ->

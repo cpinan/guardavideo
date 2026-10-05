@@ -8,6 +8,7 @@ import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
 import com.carlospinan.guardavideo.download.DownloadResult
+import com.carlospinan.guardavideo.download.isFragmentedMp4
 import com.carlospinan.guardavideo.library.MediaPostProcessor
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -21,25 +22,34 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * Turns a downloaded MPEG-TS (.ts) into MP4 with Media3 Transformer. No edits are requested, so
- * the samples are copied (transmuxed), not re-encoded: seconds, no quality loss. MP4 seeks
- * precisely and galleries understand it; TS often does neither.
+ * Rewrites downloads into a regular MP4 with Media3 Transformer. No edits are requested, so the
+ * samples are copied (transmuxed), not re-encoded: seconds, no quality loss.
+ * - MPEG-TS (.ts): MP4 seeks precisely and galleries understand it; TS often does neither.
+ * - Fragmented MP4 (moof boxes, e.g. Dailymotion via yt-dlp): readers see only the first
+ *   fragment (a 73-minute video reads as 7:30, no thumbnail). Transformer cannot rewrite those
+ *   ("Unexpected duration change"), so they go through the bundled ffmpeg ([FfmpegFaststart]).
  */
 class TransformerRemuxer @Inject constructor(
     @ApplicationContext private val context: Context,
     private val fs: FileSystem,
+    private val ffmpeg: FfmpegFaststart,
 ) : MediaPostProcessor {
 
     override suspend fun process(result: DownloadResult): Path {
         val file = result.path
-        if (!file.name.endsWith(".ts")) return file
-        val stem = file.name.removeSuffix(".ts")
+        val ts = file.name.endsWith(".ts")
+        if (!ts && !(file.name.endsWith(".mp4") && isFragmentedMp4(fs, file))) return file
+        val stem = file.name.substringBeforeLast('.')
         val tmp = file.parent!! / "$stem.remux.part" // never mistaken for a finished file
         val out = file.parent!! / "$stem.mp4"
         try {
-            remux(File(file.toString()), File(tmp.toString()))
-            fs.atomicMove(tmp, out)
-            fs.delete(file)
+            if (ts) {
+                remux(File(file.toString()), File(tmp.toString()))
+            } else if (!ffmpeg.copy(File(file.toString()), File(tmp.toString()))) {
+                return file // keep the download as it is; the repair retries on the next start
+            }
+            fs.atomicMove(tmp, out) // for a fragmented .mp4 this replaces it in place
+            if (ts) fs.delete(file)
             return out
         } finally {
             fs.delete(tmp, mustExist = false)

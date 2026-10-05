@@ -31,6 +31,7 @@ Device: `android/tools/dev.sh install|share URL|shot|ui|tap|files` (set `ANDROID
 ## Do not redo
 - ViewModels never receive `Context` (user rule): build context-needing objects in Hilt modules (`PlayerModule` gives `Player`), inject interfaces (`DownloadQueue`, `VideoExporter`).
 - Release builds are signed with the local debug key on purpose (personal sideload): a different key would force uninstalling and lose the phone's library. youtubedl-android ships no R8 rules: `proguard-rules.pro` keeps `com.yausername.**`, Jackson and commons-compress.
+- Some Dailymotion videos arrive as fragmented MP4 (length reads as the first fragment, e.g. 7:30 for 1:13:00; blank thumbnail). Media3 Transformer cannot rewrite them ("Unexpected duration change"): `FfmpegFaststart` runs youtubedl-android's bundled ffmpeg (`nativeLibraryDir/libffmpeg.so`, needs `-f mp4` for the temp name). Existing files are repaired at startup.
 - Dailymotion's CDN returns 403 (E005) to plain HTTP clients, even with honest browser headers; only yt-dlp's own workaround gets through. Use embedded yt-dlp, not a hand-written Kotlin extractor.
 - yt-dlp defaults to one HLS fragment at a time (~70 KB/s on Dailymotion); keep `--concurrent-fragments 8`.
 - AVPlayer does not play a local `.m3u8` from a file URL (stays `.unknown`, no error) and `AVAssetResourceLoader` cannot serve HLS media segments: use the loopback server.

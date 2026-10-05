@@ -12,7 +12,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.remember
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SaveAlt
 import androidx.compose.material.icons.rounded.Star
@@ -46,6 +54,7 @@ import com.carlospinan.guardavideo.app.R
 import com.carlospinan.guardavideo.app.ui.formatBytes
 import com.carlospinan.guardavideo.app.ui.formatClock
 import com.carlospinan.guardavideo.app.ui.formatWhen
+import com.carlospinan.guardavideo.app.ui.shareOriginalLink
 import com.carlospinan.guardavideo.app.ui.theme.LocalBrand
 import com.carlospinan.guardavideo.library.Job
 import com.carlospinan.guardavideo.library.JobStatus
@@ -124,6 +133,8 @@ fun FinishedCard(
     val brand = LocalBrand.current
     val context = LocalContext.current
     var confirming by rememberSaveable { mutableStateOf(false) }
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
+    val clipboard = remember(context) { context.getSystemService(ClipboardManager::class.java) }
     BrandCard(modifier) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Thumb(job, Modifier.fillMaxWidth(), showCheck = true)
@@ -159,11 +170,34 @@ fun FinishedCard(
                     modifier = Modifier.weight(1f),
                     icon = { Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) },
                 )
-                OutlinedIconButton(onClick = onSaveToGallery, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Rounded.SaveAlt, contentDescription = stringResource(R.string.save_to_gallery))
+                OutlinedIconButton(onClick = { shareOriginalLink(context, job) }, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Rounded.Share, contentDescription = stringResource(R.string.share_link))
                 }
-                OutlinedIconButton(onClick = { confirming = true }, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete))
+                // Less frequent actions in a menu, so the card keeps a roomy Play button.
+                Box {
+                    OutlinedIconButton(onClick = { menuOpen = true }, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more_options))
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.save_to_gallery)) },
+                            leadingIcon = { Icon(Icons.Rounded.SaveAlt, contentDescription = null) },
+                            onClick = { menuOpen = false; onSaveToGallery() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.copy_link)) },
+                            leadingIcon = { Icon(Icons.Rounded.Link, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                clipboard.setPrimaryClip(ClipData.newPlainText(job.displayTitle, job.url))
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.delete), color = brand.err) },
+                            leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null, tint = brand.err) },
+                            onClick = { menuOpen = false; confirming = true },
+                        )
+                    }
                 }
             }
         }

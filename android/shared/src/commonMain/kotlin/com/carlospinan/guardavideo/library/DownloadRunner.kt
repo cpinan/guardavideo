@@ -3,6 +3,7 @@ package com.carlospinan.guardavideo.library
 import com.carlospinan.guardavideo.download.DownloadException
 import com.carlospinan.guardavideo.download.DownloadListener
 import com.carlospinan.guardavideo.download.DownloadResult
+import com.carlospinan.guardavideo.download.isFragmentedMp4
 import com.carlospinan.guardavideo.download.VideoDownloader
 import com.carlospinan.guardavideo.source.detectSource
 import kotlinx.coroutines.CancellationException
@@ -41,6 +42,35 @@ suspend fun backfillDurations(repo: JobRepository, probe: MediaProbe) {
         .forEach { job ->
             val ms = runCatching { probe.durationMs(job.filePath!!.toPath()) }.getOrNull()
             if (ms != null && ms > 0) repo.update(job.id) { it.copy(durationMs = it.durationMs ?: ms) }
+        }
+}
+
+/**
+ * Videos saved before fragmented MP4s were converted (their length reads as the first fragment
+ * only): convert them now with [postProcessor] and store the real length. Runs once per file;
+ * afterwards the files are regular MP4s and are skipped.
+ */
+suspend fun repairFragmentedVideos(
+    repo: JobRepository,
+    fs: FileSystem,
+    postProcessor: MediaPostProcessor,
+    probe: MediaProbe,
+) {
+    repo.observeJobsOnce()
+        .filter { it.status == JobStatus.Done && it.filePath?.endsWith(".mp4") == true }
+        .filter { isFragmentedMp4(fs, it.filePath!!.toPath()) }
+        .forEach { job ->
+            val file = runCatching { postProcessor.process(DownloadResult(job.filePath!!.toPath(), job.title, job.sizeBytes ?: 0)) }
+                .getOrNull() ?: return@forEach
+            if (isFragmentedMp4(fs, file)) return@forEach // conversion did not happen: keep what we had
+            val duration = runCatching { probe.durationMs(file) }.getOrNull()
+            repo.update(job.id) {
+                it.copy(
+                    filePath = file.toString(),
+                    sizeBytes = fs.metadata(file).size ?: it.sizeBytes,
+                    durationMs = duration ?: it.durationMs,
+                )
+            }
         }
 }
 
