@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.carlospinan.guardavideo.app.R
 import com.carlospinan.guardavideo.app.download.DownloadQueue
+import com.carlospinan.guardavideo.app.media.VideoExporter
 import com.carlospinan.guardavideo.library.CreateResult
 import com.carlospinan.guardavideo.library.Job
 import com.carlospinan.guardavideo.library.JobRepository
@@ -33,6 +34,7 @@ sealed interface UiMessage {
 class LibraryViewModel @Inject constructor(
     private val repository: JobRepository,
     private val queue: DownloadQueue,
+    private val exporter: VideoExporter,
 ) : ViewModel() {
 
     /** Server state: the library, straight from the database (single source of truth). */
@@ -92,4 +94,9 @@ class LibraryViewModel @Inject constructor(
     fun delete(id: String) = viewModelScope.launch { repository.delete(id) }
 
     fun toggleStar(job: Job) = viewModelScope.launch { repository.setStarred(job.id, !job.starred) }
+
+    fun saveToGallery(job: Job) = viewModelScope.launch {
+        val ok = exporter.exportToGallery(job)
+        _messages.send(UiMessage.Res(if (ok) R.string.saved_to_gallery else R.string.save_failed))
+    }
 }

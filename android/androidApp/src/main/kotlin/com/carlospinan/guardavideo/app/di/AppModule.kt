@@ -10,6 +10,10 @@ import com.carlospinan.guardavideo.library.JobRepository
 import com.carlospinan.guardavideo.library.createDatabase
 import com.carlospinan.guardavideo.app.download.DownloadQueue
 import com.carlospinan.guardavideo.app.download.DownloadScheduler
+import com.carlospinan.guardavideo.app.media.MediaStoreExporter
+import com.carlospinan.guardavideo.app.media.TransformerRemuxer
+import com.carlospinan.guardavideo.app.media.VideoExporter
+import com.carlospinan.guardavideo.library.MediaPostProcessor
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -43,6 +47,12 @@ annotation class ApplicationScope
 abstract class BindingsModule {
     @Binds
     abstract fun downloadQueue(scheduler: DownloadScheduler): DownloadQueue
+
+    @Binds
+    abstract fun exporter(exporter: MediaStoreExporter): VideoExporter
+
+    @Binds
+    abstract fun postProcessor(remuxer: TransformerRemuxer): MediaPostProcessor
 }
 
 @Module
@@ -87,6 +97,11 @@ object AppModule {
         )
 
     @Provides @Singleton
-    fun runner(repo: JobRepository, downloader: VideoDownloader, fs: FileSystem, @DownloadsDir dir: Path): DownloadRunner =
-        DownloadRunner(repo, downloader, fs, dir)
+    fun runner(
+        repo: JobRepository,
+        downloader: VideoDownloader,
+        fs: FileSystem,
+        @DownloadsDir dir: Path,
+        postProcessor: MediaPostProcessor,
+    ): DownloadRunner = DownloadRunner(repo, downloader, fs, dir, postProcessor)
 }

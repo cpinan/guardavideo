@@ -6,8 +6,9 @@ kotlin = "2.4.10"
 ksp = "2.3.11"
 
 compileSdk = "37"
-# 26: java.time and adaptive icons without desugaring; ~97% of active devices.
-minSdk = "26"
+# 29 (Android 10, ~96% of active devices): MediaStore RELATIVE_PATH/IS_PENDING, so "save to
+# gallery" needs no storage permission.
+minSdk = "29"
 targetSdk = "37"
 
 composeBom = "2026.06.01"
@@ -74,6 +75,7 @@ androidx-work-testing = { module = "androidx.work:work-testing", version.ref = "
 media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
 media3-session = { module = "androidx.media3:media3-session", version.ref = "media3" }
+media3-transformer = { module = "androidx.media3:media3-transformer", version.ref = "media3" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-video = { module = "io.coil-kt.coil3:coil-video", version.ref = "coil" }
 

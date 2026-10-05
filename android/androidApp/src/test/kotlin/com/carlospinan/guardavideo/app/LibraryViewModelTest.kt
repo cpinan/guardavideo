@@ -1,6 +1,8 @@
 package com.carlospinan.guardavideo.app
 
 import com.carlospinan.guardavideo.app.download.DownloadQueue
+import com.carlospinan.guardavideo.app.media.VideoExporter
+import com.carlospinan.guardavideo.library.Job
 import com.carlospinan.guardavideo.app.ui.library.LibraryViewModel
 import com.carlospinan.guardavideo.app.ui.library.UiMessage
 import com.carlospinan.guardavideo.app.ui.library.extractUrl
@@ -32,6 +34,11 @@ class LibraryViewModelTest {
     }
 
     private val queue = FakeQueue()
+    private val exporter = object : VideoExporter {
+        val exported = mutableListOf<String>()
+        var ok = true
+        override suspend fun exportToGallery(job: Job): Boolean { exported += job.id; return ok }
+    }
     private var ids = 0
     private val repo = JobRepository(FakeJobDao(), FakeFileSystem(), clock = { 1 }, newId = { "id${++ids}" })
     private lateinit var vm: LibraryViewModel
@@ -39,7 +46,7 @@ class LibraryViewModelTest {
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        vm = LibraryViewModel(repo, queue)
+        vm = LibraryViewModel(repo, queue, exporter)
     }
 
     @AfterTest
@@ -87,5 +94,18 @@ class LibraryViewModelTest {
         assertEquals("https://x.org/a.m3u8?t=1", extractUrl("Mira esto: https://x.org/a.m3u8?t=1."))
         assertEquals("http://h/v.mp4", extractUrl("(http://h/v.mp4)"))
         assertNull(extractUrl("sin enlace"))
+    }
+
+    @Test
+    fun saveToGalleryReportsTheResult() = runTest {
+        vm.onUrlChange("https://x.org/a.mp4"); vm.submit()
+        vm.messages.first()
+        val job = repo.get("id1")!!
+        vm.saveToGallery(job)
+        assertEquals(R.string.saved_to_gallery, (vm.messages.first() as UiMessage.Res).id)
+        exporter.ok = false
+        vm.saveToGallery(job)
+        assertEquals(R.string.save_failed, (vm.messages.first() as UiMessage.Res).id)
+        assertEquals(listOf("id1", "id1"), exporter.exported)
     }
 }

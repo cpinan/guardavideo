@@ -1,6 +1,20 @@
 package com.carlospinan.guardavideo.app.ui.player
 
 import android.app.Activity
+import android.app.PictureInPictureParams
+import android.os.Build
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.core.app.PictureInPictureModeChangedInfo
+import androidx.core.util.Consumer
+import com.carlospinan.guardavideo.app.MainActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +49,26 @@ import com.carlospinan.guardavideo.app.R
 @Composable
 fun PlayerScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltViewModel()) {
     val missing by viewModel.missing.collectAsStateWithLifecycle()
+    val playing by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val aspect by viewModel.aspect.collectAsStateWithLifecycle()
+    val activity = LocalActivity.current as? MainActivity
+    val inPip = rememberIsInPipMode(activity)
+    val pipParams = remember(playing, aspect) {
+        PictureInPictureParams.Builder().setAspectRatio(aspect).apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setAutoEnterEnabled(playing)
+        }.build()
+    }
+    // Leaving the app while a video plays shrinks it into a floating window instead of stopping.
+    DisposableEffect(activity, pipParams) {
+        activity?.pipParams = pipParams.takeIf { playing && !missing }
+        activity?.setPictureInPictureParams(pipParams)
+        onDispose {
+            activity?.pipParams = null
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                activity?.setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build())
+            }
+        }
+    }
     ImmersiveMode()
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) { viewModel.pause() } // leaving the app pauses and saves
 
@@ -51,17 +85,36 @@ fun PlayerScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltViewModel(
                         setShowPreviousButton(false)
                     }
                 },
+                update = { view -> view.useController = !inPip }, // the PiP window has system controls
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        IconButton(
-            onClick = onBack,
-            colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Black.copy(alpha = 0.5f), contentColor = Color.White),
-            modifier = Modifier.safeDrawingPadding().padding(8.dp),
-        ) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
+        if (!inPip) {
+            val buttonColors = IconButtonDefaults.iconButtonColors(containerColor = Color.Black.copy(alpha = 0.5f), contentColor = Color.White)
+            Row(Modifier.safeDrawingPadding().padding(8.dp).fillMaxWidth()) {
+                IconButton(onClick = onBack, colors = buttonColors) {
+                    Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
+                }
+                Spacer(Modifier.weight(1f))
+                if (!missing) {
+                    IconButton(onClick = { activity?.enterPictureInPictureMode(pipParams) }, colors = buttonColors) {
+                        Icon(Icons.Rounded.PictureInPictureAlt, contentDescription = stringResource(R.string.pip))
+                    }
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun rememberIsInPipMode(activity: ComponentActivity?): Boolean {
+    var inPip by remember { mutableStateOf(activity?.isInPictureInPictureMode == true) }
+    DisposableEffect(activity) {
+        val listener = Consumer<PictureInPictureModeChangedInfo> { inPip = it.isInPictureInPictureMode }
+        activity?.addOnPictureInPictureModeChangedListener(listener)
+        onDispose { activity?.removeOnPictureInPictureModeChangedListener(listener) }
+    }
+    return inPip
 }
 
 /** Hides the status and navigation bars while the player is open; swipe from the edge shows them. */

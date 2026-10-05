@@ -144,6 +144,7 @@ fun LibraryScreen(
                     onRetry = { viewModel.retry(job.id) },
                     onDelete = { viewModel.delete(job.id) },
                     onToggleStar = { viewModel.toggleStar(job) },
+                    onSaveToGallery = { viewModel.saveToGallery(job) },
                     modifier = Modifier.animateItem(),
                 )
             }

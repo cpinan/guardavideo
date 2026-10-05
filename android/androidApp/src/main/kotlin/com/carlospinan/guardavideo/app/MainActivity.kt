@@ -1,6 +1,8 @@
 package com.carlospinan.guardavideo.app
 
+import android.app.PictureInPictureParams
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,6 +28,18 @@ data class PlayerRoute(val id: String)
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    /** Set by the player screen while a video plays; used to enter PiP on Android 10-11. */
+    var pipParams: PictureInPictureParams? = null
+
+    /** Android 12+ enters PiP by itself (auto-enter); older versions need this hint. */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        val params = pipParams
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && params != null && !isInPictureInPictureMode) {
+            enterPictureInPictureMode(params)
+        }
+    }
+
     /** A link shared from another app ("Share → Guardavideo"), waiting to fill the URL field. */
     private var sharedUrl by mutableStateOf<String?>(null)
 

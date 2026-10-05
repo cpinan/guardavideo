@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.ktor.client.okhttp)
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
+    implementation(libs.media3.transformer)
     implementation(libs.coil.compose)
     implementation(libs.coil.video)
 

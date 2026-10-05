@@ -14,12 +14,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.SaveAlt
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -64,6 +68,7 @@ fun JobCard(
     onRetry: () -> Unit,
     onDelete: () -> Unit,
     onToggleStar: () -> Unit,
+    onSaveToGallery: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val failed = job.status == JobStatus.Error || job.status == JobStatus.Cancelled
@@ -76,7 +81,7 @@ fun JobCard(
         },
     ) {
         when {
-            job.status == JobStatus.Done -> DoneContent(job, onPlay, onDelete, onToggleStar)
+            job.status == JobStatus.Done -> DoneContent(job, onPlay, onDelete, onToggleStar, onSaveToGallery)
             job.status.isActive -> ActiveContent(job, onCancel)
             failed -> FailedContent(job, onRetry, onDelete)
         }
@@ -84,9 +89,16 @@ fun JobCard(
 }
 
 @Composable
-private fun DoneContent(job: Job, onPlay: () -> Unit, onDelete: () -> Unit, onToggleStar: () -> Unit) {
+private fun DoneContent(
+    job: Job,
+    onPlay: () -> Unit,
+    onDelete: () -> Unit,
+    onToggleStar: () -> Unit,
+    onSaveToGallery: () -> Unit,
+) {
     val context = LocalContext.current
     var confirming by rememberSaveable { mutableStateOf(false) }
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
     val playLabel = stringResource(R.string.play)
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -137,8 +149,22 @@ private fun DoneContent(job: Job, onPlay: () -> Unit, onDelete: () -> Unit, onTo
                 tint = if (job.starred) Color(0xFFF5B301) else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        IconButton(onClick = { confirming = true }) {
-            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete))
+        Box {
+            IconButton(onClick = { menuOpen = true }) {
+                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more_options))
+            }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.save_to_gallery)) },
+                    leadingIcon = { Icon(Icons.Rounded.SaveAlt, contentDescription = null) },
+                    onClick = { menuOpen = false; onSaveToGallery() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.delete)) },
+                    leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null) },
+                    onClick = { menuOpen = false; confirming = true },
+                )
+            }
         }
     }
     if (confirming) {

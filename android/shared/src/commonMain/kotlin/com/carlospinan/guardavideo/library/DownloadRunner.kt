@@ -17,6 +17,15 @@ import okio.FileSystem
 import okio.Path
 
 /**
+ * Optional step after a download, e.g. remuxing MPEG-TS into MP4 on the device. Returns the
+ * file to keep (it may be a new one; the old one is the processor's to delete). A failure here
+ * never fails the job: the original download is kept.
+ */
+fun interface MediaPostProcessor {
+    suspend fun process(file: Path): Path
+}
+
+/**
  * Runs one job end to end: Queued → Running → Done / Error, writing progress to the library.
  * The platform decides *where* it runs (WorkManager on Android); this decides *what* happens.
  *
@@ -28,6 +37,7 @@ class DownloadRunner(
     private val downloader: VideoDownloader,
     private val fs: FileSystem,
     private val downloadsDir: Path,
+    private val postProcessor: MediaPostProcessor = MediaPostProcessor { it },
 ) {
     /** Returns the final status, or null if the job was deleted or already finished. */
     suspend fun run(id: String, onUpdate: (Job) -> Unit = {}): JobStatus? {
@@ -57,10 +67,18 @@ class DownloadRunner(
                 downloader.download(detectSource(job.url), id, downloadsDir, job.quality, listener)
                     .also { writer.cancel() }
             }
+            val file = try {
+                postProcessor.process(result.path)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                result.path
+            }
             repo.update(id) {
                 it.copy(
                     status = JobStatus.Done, percent = 100f, retries = 0, error = null,
-                    filePath = result.path.toString(), sizeBytes = result.sizeBytes, title = it.title ?: result.title,
+                    filePath = file.toString(), sizeBytes = fs.metadata(file).size ?: result.sizeBytes,
+                    title = it.title ?: result.title,
                 )
             }?.let(onUpdate)
             JobStatus.Done

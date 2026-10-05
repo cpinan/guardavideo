@@ -22,7 +22,10 @@ class DownloadRunnerTest {
     private val dir = "/downloads".toPath()
     private val repo = JobRepository(FakeJobDao(), fs, clock = { 1 }, newId = { "j1" })
 
-    private fun runner(block: suspend (LinkSource, String, Path, DownloadListener) -> DownloadResult) =
+    private fun runner(
+        postProcessor: MediaPostProcessor = MediaPostProcessor { it },
+        block: suspend (LinkSource, String, Path, DownloadListener) -> DownloadResult,
+    ) =
         DownloadRunner(
             repo,
             object : VideoDownloader {
@@ -31,6 +34,7 @@ class DownloadRunnerTest {
             },
             fs,
             dir,
+            postProcessor,
         )
 
     private suspend fun queued() = assertIs<CreateResult.Created>(repo.create("https://x.org/My%20clip.mp4", null)).job
@@ -92,5 +96,36 @@ class DownloadRunnerTest {
         cancelled.cancel()
         cancelled.join()
         assertEquals(JobStatus.Cancelled, repo.get(job.id)!!.status)
+    }
+
+    @Test
+    fun postProcessingReplacesTheFileAndItsSize() = runTest {
+        val job = queued()
+        val remux = MediaPostProcessor { path ->
+            val mp4 = path.parent!! / "${path.name.substringBeforeLast('.')}.mp4"
+            fs.write(mp4) { writeUtf8("remuxed!") }
+            fs.delete(path)
+            mp4
+        }
+        runner(remux) { _, id, destDir, _ ->
+            val ts = destDir / "$id.ts"
+            fs.write(ts) { writeUtf8("ts") }
+            DownloadResult(ts, null, 2)
+        }.run(job.id)
+        val stored = repo.get(job.id)!!
+        assertEquals("/downloads/j1.mp4", stored.filePath)
+        assertEquals(8L, stored.sizeBytes)
+    }
+
+    @Test
+    fun aFailedPostProcessKeepsTheOriginalDownload() = runTest {
+        val job = queued()
+        val status = runner(MediaPostProcessor { error("remux failed") }) { _, id, destDir, _ ->
+            val ts = destDir / "$id.ts"
+            fs.write(ts) { writeUtf8("ts") }
+            DownloadResult(ts, null, 2)
+        }.run(job.id)
+        assertEquals(JobStatus.Done, status)
+        assertEquals("/downloads/j1.ts", repo.get(job.id)!!.filePath)
     }
 }
