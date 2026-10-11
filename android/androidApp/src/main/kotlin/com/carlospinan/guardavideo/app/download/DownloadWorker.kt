@@ -1,10 +1,8 @@
 package com.carlospinan.guardavideo.app.download
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.ServiceInfo
 import android.os.Build
-import androidx.core.app.NotificationManagerCompat
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import android.util.Log
@@ -40,17 +38,24 @@ class DownloadWorker @AssistedInject constructor(
             Log.w("DownloadWorker", "No foreground service for $id: ${e.javaClass.simpleName}")
         }
 
-        var lastShown = -1
+        // Redraw when the number, the title (yt-dlp learns it late), the picture or the retry note changes.
+        var lastShown: List<Any?>? = null
+        var lastAt = 0L
         val status = runner.run(id) { updated ->
-            val pct = updated.percent.toInt()
-            if (updated.status == JobStatus.Running && pct != lastShown) {
-                lastShown = pct
-                notify(Notifications.idFor(updated), Notifications.progress(applicationContext, updated))
+            val shown = listOf(updated.percent.toInt(), updated.displayTitle, updated.thumbnailPath != null, updated.retries)
+            // At most one redraw every 500 ms: Android sheds notification updates sent too fast,
+            // and that could swallow the final "done" one.
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (updated.status == JobStatus.Running && shown != lastShown && now - lastAt >= 500) {
+                lastShown = shown
+                lastAt = now
+                Notifications.show(applicationContext, Notifications.idFor(updated), Notifications.progress(applicationContext, updated))
             }
         }
         val finished = repository.get(id)
-        if (finished != null && status != null) {
-            notify(Notifications.idFor(finished) + 1, Notifications.finished(applicationContext, finished, status == JobStatus.Done))
+        // A cancel is the user's own doing: no "failed" notification for it.
+        if (finished != null && (status == JobStatus.Done || status == JobStatus.Error)) {
+            Notifications.show(applicationContext, Notifications.finishedIdFor(finished), Notifications.finished(applicationContext, finished, status == JobStatus.Done))
         }
         return Result.success() // failures are recorded on the job; WorkManager must not retry them
     }
@@ -68,13 +73,6 @@ class DownloadWorker @AssistedInject constructor(
         } else {
             ForegroundInfo(Notifications.idFor(job), notification)
         }
-    }
-
-    // Without POST_NOTIFICATIONS (Android 13+) the download still runs; it is just silent.
-    @SuppressLint("MissingPermission")
-    private fun notify(id: Int, notification: android.app.Notification) {
-        val manager = NotificationManagerCompat.from(applicationContext)
-        if (manager.areNotificationsEnabled()) manager.notify(id, notification)
     }
 
     companion object {

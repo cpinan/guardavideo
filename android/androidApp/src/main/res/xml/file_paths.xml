@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Downloads live in the app's own folders (external files dir, or internal as fallback). -->
+<paths>
+    <external-files-path name="external_files" path="." />
+    <files-path name="internal_files" path="." />
+</paths>

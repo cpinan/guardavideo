@@ -2,6 +2,8 @@ package com.carlospinan.guardavideo.app.di
 
 import com.carlospinan.guardavideo.app.media.FfmpegFaststart
 import com.carlospinan.guardavideo.app.media.FragmentedMp4Fixer
+import com.carlospinan.guardavideo.app.media.FullWebSearch
+import com.carlospinan.guardavideo.app.media.WebSearch
 import com.carlospinan.guardavideo.app.media.SiteSupport
 import com.carlospinan.guardavideo.app.media.YtDlpSiteDownloader
 import com.carlospinan.guardavideo.app.media.YtDlpUpdater
@@ -17,8 +19,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object FlavorModule {
     @Provides @Singleton
-    fun siteSupport(ytDlp: YtDlpSiteDownloader, updater: YtDlpUpdater): SiteSupport = object : SiteSupport {
+    fun siteSupport(ytDlp: YtDlpSiteDownloader, updater: YtDlpUpdater, webSearch: FullWebSearch): SiteSupport = object : SiteSupport {
         override val downloader: VideoDownloader = ytDlp
+        override val search: WebSearch = webSearch
 
         override suspend fun maintenance() {
             updater.updateIfStale()

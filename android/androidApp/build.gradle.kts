@@ -15,8 +15,8 @@ android {
     defaultConfig {
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 7
-        versionName = "0.7.0"
+        versionCode = 8
+        versionName = "0.8.0"
     }
 
     // Play upload key: android/keystore.properties (not in git). Until it exists, Play bundles are
@@ -99,6 +99,7 @@ dependencies {
     implementation(libs.media3.cast)
     implementation(libs.coil.compose)
     implementation(libs.coil.video)
+    implementation(libs.coil.network) // search-result thumbnails come from the web
     // Full flavor only: yt-dlp + Python + ffmpeg. The Play build does not contain them at all.
     "fullImplementation"(libs.youtubedl.android)
     "fullImplementation"(libs.youtubedl.ffmpeg)

@@ -90,6 +90,7 @@ import com.carlospinan.guardavideo.app.settings.ThemeMode
 import com.carlospinan.guardavideo.app.ui.formatBytes
 import com.carlospinan.guardavideo.app.ui.formatClock
 import com.carlospinan.guardavideo.app.ui.formatWhen
+import com.carlospinan.guardavideo.app.ui.rememberAskNotifications
 import com.carlospinan.guardavideo.app.ui.theme.LocalBrand
 import com.carlospinan.guardavideo.library.Job
 import com.carlospinan.guardavideo.library.LibraryFilter
@@ -133,14 +134,10 @@ fun LibraryScreen(
         }
     }
 
-    // Asked once, at the first download: the progress notification needs it on Android 13+.
-    val askNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    // Asked at the first download: the progress notification needs it on Android 13+.
+    val askNotifications = rememberAskNotifications()
     val submit = {
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            askNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+        askNotifications()
         viewModel.submit()
     }
 

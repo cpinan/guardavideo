@@ -13,6 +13,9 @@ interface SiteSupport {
     /** Downloader for site pages (YouTube, Dailymotion…), or null where sites are not supported. */
     val downloader: VideoDownloader?
 
+    /** Search across sites, or null where it is not offered (it needs the site downloader to be useful). */
+    val search: WebSearch? get() = null
+
     /** Periodic upkeep at app start (yt-dlp's daily self-update in the full flavor). */
     suspend fun maintenance() {}
 }

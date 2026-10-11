@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Share
 import com.carlospinan.guardavideo.app.ui.shareOriginalLink
+import com.carlospinan.guardavideo.app.ui.shareVideoFile
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -128,8 +129,11 @@ fun PlayerScreen(onBack: () -> Unit, viewModel: PlayerViewModel = hiltViewModel(
                 }
                 state.job?.let { job ->
                     val context = LocalContext.current
-                    IconButton(onClick = { shareOriginalLink(context, job) }, colors = buttonColors) {
-                        Icon(Icons.Rounded.Share, contentDescription = stringResource(R.string.share_link))
+                    IconButton(
+                        onClick = { if (!shareVideoFile(context, job)) shareOriginalLink(context, job) },
+                        colors = buttonColors,
+                    ) {
+                        Icon(Icons.Rounded.Share, contentDescription = stringResource(R.string.share_video))
                     }
                 }
                 if (!missing) {

@@ -57,6 +57,7 @@ import com.carlospinan.guardavideo.app.ui.formatBytes
 import com.carlospinan.guardavideo.app.ui.formatClock
 import com.carlospinan.guardavideo.app.ui.formatWhen
 import com.carlospinan.guardavideo.app.ui.shareOriginalLink
+import com.carlospinan.guardavideo.app.ui.shareVideoFile
 import com.carlospinan.guardavideo.app.ui.theme.LocalBrand
 import com.carlospinan.guardavideo.library.Job
 import com.carlospinan.guardavideo.library.JobStatus
@@ -257,8 +258,13 @@ fun FinishedCard(
                     modifier = Modifier.weight(1f),
                     icon = { Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp)) },
                 )
-                OutlinedIconButton(onClick = { shareOriginalLink(context, job) }, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Rounded.Share, contentDescription = stringResource(R.string.share_link))
+                OutlinedIconButton(
+                    onClick = {
+                        if (!shareVideoFile(context, job)) android.widget.Toast.makeText(context, R.string.share_failed, android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Icon(Icons.Rounded.Share, contentDescription = stringResource(R.string.share_video))
                 }
                 // Less frequent actions in a menu, so the card keeps a roomy Play button.
                 Box {
@@ -270,6 +276,11 @@ fun FinishedCard(
                             text = { Text(stringResource(R.string.save_to_gallery)) },
                             leadingIcon = { Icon(Icons.Rounded.SaveAlt, contentDescription = null) },
                             onClick = { menuOpen = false; onSaveToGallery() },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.share_link)) },
+                            leadingIcon = { Icon(Icons.Rounded.Link, contentDescription = null) },
+                            onClick = { menuOpen = false; shareOriginalLink(context, job) },
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.copy_link)) },

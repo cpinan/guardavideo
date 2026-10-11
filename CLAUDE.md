@@ -38,6 +38,11 @@ nunca referenciar yt-dlp desde `src/main`. Enlaces directos
   Errores explicados: `shared/library/Failure.kt` (`classifyFailure`, portado de `lib/errors.ts`). Historial de
   enlaces: tabla `history` (Room v5) que mantiene `JobRepository`; sobrevive al borrar el video.
   Room en v2 (AutoMigration 1→2). UI Android con la paleta de la web (`ui/theme`), tema claro/oscuro/sistema.
+- **Búsqueda web (solo `full`)**: pestaña «Buscar» (`ui/search/`). `SiteSupport.search` (`WebSearch`): Dailymotion por su API
+  pública (activo por defecto) y YouTube con `ytsearch` de yt-dlp (`FullWebSearch`). El sabor `play` devuelve `null` y no
+  muestra la barra de pestañas.
+- **Notificaciones** (`download/Notifications.kt`): progreso con barra + «Cancelar» (`CancelDownloadReceiver`); guardar en la
+  galería avisa con progreso y «Guardado». Compartir el archivo usa `FileProvider` (`res/xml/file_paths.xml`).
 - **ViewModels nunca reciben `Context`**: lo que lo necesita (ExoPlayer, WorkManager) se crea en un módulo Hilt
   y el VM recibe una interfaz (`Player`, `DownloadQueue`). Textos de UI en `strings.xml`.
 
