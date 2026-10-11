@@ -1,19 +1,23 @@
 # STATUS — Guardavideo
 
-_Last updated: 2026-10-05 · branch `main` · 0 uncommitted files_
+_Last updated: 2026-10-10 · branch `main` · 0 uncommitted files (only untracked `.claude/`, `android/.claude/` skills, intentionally not committed)_
 
 ## Next action
-User tests v0.7.0 on the Pixel (both flavors installed 2026-10-05: Guardavideo+ full release, Guardavideo play debug); after that, create the Play upload key (`android/keystore.properties`, git-ignored) and the Play Console app for `com.carlospinan.guardavideo.play`, then upload `make android-play-bundle`'s AAB to internal testing.
+User tests v0.8.0 on the Pixel (install `Guardavideo-0.8.0.apk` from the GitHub release: web search tab, share video file, gallery-saved notification, progress notification + Cancel); then fix the two known UX bugs below, then the Play upload key (`android/keystore.properties`, git-ignored) and Play Console app for `com.carlospinan.guardavideo.play`.
 
 ## State
-- Web + API (Mac): HLS + yt-dlp downloads, SQLite library, shelves, mobile UI, `make serve` (production on 127.0.0.1:8080, debug off) + `make tailscale-serve` for private sharing. Repo `github.com/cpinan/guardavideo` (private); CI runs `check` (web) and `android` jobs, both green.
+- Web + API (Mac): HLS + yt-dlp downloads, SQLite library, shelves, mobile UI, `make serve` (production on 127.0.0.1:8080, debug off) + `make tailscale-serve` for private sharing. Repo `github.com/cpinan/guardavideo` (**public since 2026-10-10**); CI runs `check` (web) and `android` jobs, both green.
 - Android (`android/`, KMP `:shared` + `:androidApp`, v0.7.0 on the Pixel 2026-10-05): downloads **on the phone**: site pages (Dailymotion, YouTube…) via embedded yt-dlp (`youtubedl-android` 0.18.1, `--concurrent-fragments 8`, daily self-update), direct links (.m3u8 incl. AES-128, .mp4…) via the shared downloader; DRM refused. Dailymotion verified on the emulator (105 MB in 40 s). WorkManager foreground worker, Room library, Media3 player with resume + PiP, .ts→.mp4 remux (Transformer, no re-encode), save to gallery (MediaStore), Share target. minSdk 29. Verified on an API 36 emulator.
+- Android v0.8.0 (2026-10-10, released: https://github.com/cpinan/guardavideo/releases/tag/v0.8.0, `Guardavideo-0.8.0.apk`, full flavor, debug-key signed): bottom tabs Biblioteca/Buscar (full only; `SiteSupport.search` is null in play → no bar). Search = Dailymotion public API (default on) + YouTube via yt-dlp `ytsearch` (`full/.../FullWebSearch.kt`, parsers unit-tested in `src/testFull`). Share sends the file through FileProvider (`res/xml/file_paths.xml`). Notifications (`download/Notifications.kt`): progress bar + Cancelar (`CancelDownloadReceiver`), gallery export progress → "Guardado en la galería". Verified on emulator (release/R8 build): search, progress notif, cancel, share sheet, gallery save. NOT verified: YouTube search chip, tapping the saved notification, WhatsApp share, a real Pixel. README has an Android section with screenshots in `docs/screenshots/`.
 - Android flavors (2026-10-05, v0.7.0): `full` = `com.carlospinan.guardavideo` "Guardavideo+" (yt-dlp, arm64, debug-key signed, sideload for user + friends); `play` = `com.carlospinan.guardavideo.play` "Guardavideo" (direct links only, 0 yt-dlp/Python/ffmpeg entries, AAB 11.4 MB, unsigned until the upload key exists). Both installed side by side on the Pixel; play verified on emulator (YouTube refused, direct HLS downloads).
 - iOS (`ios/`, SwiftUI on the same `:shared`): same downloads; TS played through a local byte-range .m3u8 served by `LocalMediaServer` (127.0.0.1 + token) because AVPlayer won't play HLS from a file path. PiP, resume, ShareLink export, `guardavideo://download?url=…` for Shortcuts. Verified on an iOS 26.5 simulator (download + AES); playback verified with AVPlayer on macOS against the same server file.
 - Not built: iOS share extension, iOS background downloads beyond the system's few minutes, Tailscale sharing not finished (needs sign-in), cookies for login-only sites, iOS on a real iPhone.
 
 ## In flight
-Nothing in flight; all committed and pushed. Production server (`make serve`) may still be running from this session on :8080.
+Nothing in flight; all committed and pushed. Known UX bugs found 2026-10-10, not fixed:
+- `androidApp/.../ui/library/LibraryScreen.kt` (`FailedBanner`, count from `state.counts[LibraryFilter.Failed]`) — user-cancelled jobs count as "1 descarga falló"; cancelled should not trigger the red banner.
+- `androidApp/.../ui/Share.kt` `shareVideoFile` — share sheet shows the on-disk name (`a696522e4f93.mp4`) instead of the title; fixing means a renamed copy or different file naming.
+- A Dailymotion download interrupted by an app reinstall stalled at 8% for minutes before resuming (likely the killed worker; not confirmed).
 
 ## Verify
 ```bash
@@ -26,7 +30,7 @@ Device: `android/tools/dev.sh install|share URL|shot|ui|tap|files` (set `ANDROID
 
 ## Open questions
 - Tailscale (2026-10-03): Tailscale.app is open but signed out (VPN "Connecting", CLI error 1). Needs the user to sign in, approve the VPN config, and enable HTTPS certificates; then run `make tailscale-serve`.
-- Make the repo public? Pending since 2026-10-02 (commit email exposure; would need a history rewrite).
+- Repo is public (2026-10-10) but commits carry the personal email and no LICENSE file exists; `CLAUDE.md` still says not to host publicly without legal review (about the service, but a yt-dlp downloader is now public). History rewrite for the email NOT done.
 - Play account (2026-10-05): user's account hosts other apps; a downloader risks policy strikes there — separate developer account recommended, user to decide. `.play` ID is permanent once the app is created in Play Console.
 - iOS on a real iPhone needs a signing team chosen in Xcode (personal team is fine for sideloading, 7-day expiry).
 
@@ -43,7 +47,10 @@ Device: `android/tools/dev.sh install|share URL|shot|ui|tap|files` (set `ANDROID
 - AVPlayer does not play a local `.m3u8` from a file URL (stays `.unknown`, no error) and `AVAssetResourceLoader` cannot serve HLS media segments: use the loopback server.
 - AGP 9 KMP library plugin: without `withHostTest {}` shared tests silently never run. Use `kotlin-test-junit` (not `kotlin-test`) in Android-only modules.
 - Gradle in an Xcode build phase needs `ENABLE_USER_SCRIPT_SANDBOXING: NO`; exclude the x86_64 simulator slice (Kotlin builds arm64 only).
-- `emulator-5554` (and other emulators) are used by other sessions (PianoApp): start a dedicated AVD on its own port (e.g. `-port 5570`).
+- `emulator-5554` (and other emulators) are used by other sessions (PianoApp, pokemmostats): start a dedicated AVD on its own port (e.g. `-port 5570`). It had animation scales set to 0 (Compose animations look off) and is slow: first launch can ANR, give it 15 s.
+- Android drops notification updates sent too fast (also the final one): throttle progress to 1 per 500 ms (done in `DownloadWorker` and `MediaStoreExporter`). Don't post per-percent.
+- `MediaStoreExporter.exportToGallery` runs in `NonCancellable`: leaving the screen must not leave a half-copied video and a stuck "Guardando…" notification.
+- BSD `sed -i` needs `''`; `adb shell am start` on a slow emulator leaves `dev.sh ui` returning "null root node" until the app is up: loop until "Biblioteca" appears.
 - zsh does not word-split `$VAR` (`$ADB -s …` fails, `set -- $xy` fails): use `tools/dev.sh` or `${=var}`.
 - Don't rename internal `hlsweb` keys (`HLSWEB_*`, `hlsweb:*`, `hlsweb.db`).
 - Web: grid/flex items holding horizontal scrollers need `min-width: 0`; `.job` uses `animation-fill-mode: backwards` (a filled transform traps the fixed lightbox).
