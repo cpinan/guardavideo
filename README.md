@@ -2,12 +2,26 @@
 
 Descarga videos desde el navegador con progreso en vivo. API FastAPI + frontend React/TypeScript.
 
-**Repositorio (privado):** <https://github.com/cpinan/guardavideo>
+**Repositorio:** <https://github.com/cpinan/guardavideo>
 **Uso local:** tras arrancar (ver [Cómo usarlo](#cómo-usarlo)) abre <http://localhost:5173>
 · API y documentación interactiva: <http://localhost:8000/docs>
 
-> No hay despliegue público: es una herramienta de uso personal/local y de aprendizaje.
+> No hay servicio desplegado: es una herramienta de uso personal/local y de aprendizaje.
 > No evade DRM. Respeta los términos de cada sitio y no redistribuyas contenido.
+
+## App Android (Guardavideo+)
+
+Descarga **en el teléfono**, sin servidor. **[⬇️ Descargar el APK (última versión)](https://github.com/cpinan/guardavideo/releases/latest)**
+y ábrelo en Android (te pedirá permitir «instalar apps desconocidas» para tu navegador o gestor de archivos).
+
+| Biblioteca | Buscar en la web | Avisos |
+|---|---|---|
+| ![Biblioteca con videos descargados](docs/screenshots/library.png) | ![Búsqueda en Dailymotion y YouTube](docs/screenshots/search.png) | ![Notificación de guardado en la galería](docs/screenshots/notification-saved.png) |
+
+- **Buscar sin salir de la app**: pestaña *Buscar*, filtra por sitio (Dailymotion activado por defecto, YouTube opcional) y descarga con un toque.
+- **Notificaciones con barra de progreso** y botón *Cancelar*; aviso al terminar o al guardar en la galería.
+- **Compartir el video** (WhatsApp, Drive…) o solo su enlace; **guardar en la galería**; reproducir, Chromecast y Picture-in-Picture.
+- Requiere Android 10+ y un teléfono de 64 bits (arm64). Más detalle en [`android/README.md`](android/README.md).
 
 ## Qué hace
 - **Enlace `.m3u8` directo** → descargador HLS propio (segmentos en paralelo, AES-128, ffmpeg).
